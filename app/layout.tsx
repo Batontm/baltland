@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const faviconUrl = (data as any)?.favicon_url ? String((data as any).favicon_url) : null
 
   const baseUrl = "https://baltland.ru"
-  const title = "Земельные участки в Калининграде | БалтикЗемля"
+  const title = "Купить участок ИЖС в Калининграде — от 100 тыс. ₽ | BaltLand"
   const description =
     "Продажа земельных участков в Калининградской области. Более 12 лет помогаем людям обрести свой уголок у Балтийского моря."
 
