@@ -1,0 +1,31 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_YANDEX_MAPS_API_KEY: ${NEXT_PUBLIC_YANDEX_MAPS_API_KEY}
+    container_name: rkkland_web
+    mem_limit: 2g
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - supabase_default
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    # На сервере создай файл .env.docker рядом с docker-compose.yml
+    # и добавь туда переменные (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, TELEGRAM_* и т.д.)
+    env_file:
+      - .env.docker
+
+networks:
+  supabase_default:
+    external: true

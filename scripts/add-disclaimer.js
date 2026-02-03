@@ -1,0 +1,80 @@
+/**
+ * Add disclaimer to all plot descriptions
+ * Run: node scripts/add-disclaimer.js
+ */
+
+const SUPABASE_URL = "https://api.baltland.ru";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3Njg4Mjk3MzMsImV4cCI6MjA4NDE4OTczM30.v_1Wpg06VVCTfDOeQudlD5q7kpHVvR7LvTZCCXJtzWI";
+
+const DISCLAIMER = `
+
+❗ Важно о деталях:
+В нашей базе более 2000 участков, поэтому в описании могут быть неточности касательно текущего состояния подъездных путей или коммуникаций. Информация носит справочный характер и не является публичной офертой (ст. 437 ГК РФ).
+Стоимость и параметры могут меняться. Чтобы избежать недоразумений, пожалуйста, уточните актуальные нюансы у менеджера перед просмотром.`;
+
+async function fetchRecentPlots() {
+    // Get plots added recently
+    const yesterday = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    const url = `${SUPABASE_URL}/rest/v1/land_plots?select=id,cadastral_number,description&created_at=gte.${yesterday}&is_active=eq.true&limit=300`;
+
+    const res = await fetch(url, {
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+        }
+    });
+
+    const data = await res.json();
+
+    // Filter plots that don't have the disclaimer yet
+    return data.filter(plot => {
+        if (!plot.description) return false;
+        return !plot.description.includes('❗ Важно о деталях');
+    });
+}
+
+async function updatePlot(id, description) {
+    const url = `${SUPABASE_URL}/rest/v1/land_plots?id=eq.${id}`;
+
+    const res = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ description }),
+    });
+
+    return res.ok;
+}
+
+async function main() {
+    console.log('='.repeat(60));
+    console.log('ДОБАВЛЕНИЕ ДИСКЛЕЙМЕРА К ОПИСАНИЯМ');
+    console.log('='.repeat(60));
+    console.log('');
+
+    console.log('🌐 Загрузка участков без дисклеймера...');
+    const plots = await fetchRecentPlots();
+    console.log(`   Найдено: ${plots.length}`);
+    console.log('');
+
+    let updated = 0;
+
+    for (const plot of plots) {
+        const newDescription = plot.description + DISCLAIMER;
+
+        const ok = await updatePlot(plot.id, newDescription);
+        if (ok) {
+            updated++;
+            console.log(`✅ ${plot.cadastral_number || plot.id}`);
+        }
+    }
+
+    console.log('');
+    console.log('='.repeat(60));
+    console.log(`✅ Обновлено: ${updated}`);
+}
+
+main().catch(console.error);

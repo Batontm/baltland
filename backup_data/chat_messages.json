@@ -1,0 +1,15 @@
+[
+{"id":"39c07f9e-e92f-4d5a-9735-d66ea23f4cce","session_id":"e0eb7de0-bd1f-4659-a0da-23dc288032ae","text":"Не работают","sender":"admin","telegram_message_id":null,"created_at":"2026-01-10T20:28:24.021402+00:00"}, 
+ {"id":"4c1f09b6-62d2-4bfe-8711-8e14c0db8fb5","session_id":"e0eb7de0-bd1f-4659-a0da-23dc288032ae","text":"Попробуй","sender":"admin","telegram_message_id":null,"created_at":"2026-01-10T20:28:01.76063+00:00"}, 
+ {"id":"5df1d411-e405-4c7f-b4a1-2d65d8137b2d","session_id":"e9c13b2c-4ca0-46e2-81f8-b1063ba8b757","text":"6666","sender":"user","telegram_message_id":4558,"created_at":"2026-01-10T20:30:34.762942+00:00"}, 
+ {"id":"671b9b01-9c00-43c0-a0e1-2ba8a50889b5","session_id":"e0eb7de0-bd1f-4659-a0da-23dc288032ae","text":"ыычмс","sender":"user","telegram_message_id":4555,"created_at":"2026-01-10T20:27:42.752984+00:00"}, 
+ {"id":"6bb89b15-f456-48e7-ab1e-197a80627cb0","session_id":"e0eb7de0-bd1f-4659-a0da-23dc288032ae","text":"re","sender":"user","telegram_message_id":4553,"created_at":"2026-01-10T20:21:59.078099+00:00"}, 
+ {"id":"6def0356-283d-4cf3-9720-edeea760b4d1","session_id":"e9c13b2c-4ca0-46e2-81f8-b1063ba8b757","text":"получается , что чат работает","sender":"user","telegram_message_id":4560,"created_at":"2026-01-10T20:31:14.839976+00:00"}, 
+ {"id":"76cf3bfe-83d4-4d4d-a397-c336f2eba136","session_id":"e9c13b2c-4ca0-46e2-81f8-b1063ba8b757","text":"Норм","sender":"admin","telegram_message_id":null,"created_at":"2026-01-10T20:30:45.896208+00:00"}, 
+ {"id":"89c26c64-80e3-48bb-9484-bcaa594ab95d","session_id":"933afcf4-922a-493a-a883-3087d20679ed","text":"Как дела?","sender":"user","telegram_message_id":4543,"created_at":"2026-01-10T20:03:14.58468+00:00"}, 
+ {"id":"93b10da1-f2d2-42c4-b0bf-abeaab4afa7e","session_id":"933afcf4-922a-493a-a883-3087d20679ed","text":"b","sender":"user","telegram_message_id":4547,"created_at":"2026-01-10T20:07:05.592+00:00"}, 
+ {"id":"a4c19337-6f57-418f-a3de-618115086a9e","session_id":"e9c13b2c-4ca0-46e2-81f8-b1063ba8b757","text":"Да","sender":"admin","telegram_message_id":null,"created_at":"2026-01-10T20:31:19.915445+00:00"}, 
+ {"id":"cef00343-2b29-45dc-aba7-5f41de8c3deb","session_id":"18d658cc-a7ac-4f9c-93fb-5408beaac5b4","text":"привет","sender":"user","telegram_message_id":4531,"created_at":"2026-01-06T17:31:12.01938+00:00"}, 
+ {"id":"d7dc8824-8477-49f6-809d-7db4760c7584","session_id":"5e5c4ea6-223a-41db-af74-e4749ed90fa8","text":"проверка связи","sender":"user","telegram_message_id":4565,"created_at":"2026-01-14T13:59:29.570334+00:00"}, 
+ {"id":"fb7d714a-b100-4aee-be36-21711c56c12a","session_id":"5e5c4ea6-223a-41db-af74-e4749ed90fa8","text":"Все работает.","sender":"admin","telegram_message_id":null,"created_at":"2026-01-14T13:59:48.197888+00:00"}
+]

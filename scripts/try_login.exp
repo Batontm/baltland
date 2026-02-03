@@ -1,0 +1,31 @@
+#!/usr/bin/expect
+
+set timeout 20
+set ip "85.198.85.239"
+set user "root"
+set password "uVma7Ek!(J5F"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$ip "echo SUCCESS_LOGIN"
+
+expect {
+    "password:" {
+        send -- "$password\r"
+        exp_continue
+    }
+    "SUCCESS_LOGIN" {
+        puts "\n--- LOGIN VERIFIED ---\n"
+        exit 0
+    }
+    "Permission denied" {
+        puts "\n--- PERMISSION DENIED ---\n"
+        exit 1
+    }
+    timeout {
+        puts "\n--- TIMEOUT ---\n"
+        exit 1
+    }
+    eof {
+        puts "\n--- CONNECTION CLOSED ---\n"
+        exit 1
+    }
+}

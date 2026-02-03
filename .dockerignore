@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.env*
+Dockerfile
+docker-compose.yml
+docker-compose.yaml
+netlify.toml
+README.md
+*.log
+.DS_Store
+.vscode
+.idea

@@ -1,0 +1,59 @@
+# dependencies
+node_modules
+
+# Next.js
+.next
+out
+
+# production
+build
+
+# misc
+.DS_Store
+*.log
+
+# env files
+.env
+.env.*
+!.env.example
+
+# local
+.vercel
+
+# editor
+.vscode
+.idea
+.cursor
+.windsurf
+
+# databases and dumps
+*.sql
+*.dump
+*.db
+*.sqlite
+
+# archives
+*.tgz
+*.tar.gz
+*.zip
+
+# temporary data and audit results
+*.txt
+*.csv
+*.jsonl
+all-plots-unique-descriptions.json
+bundle_analysis_report.json
+cadastral-district-check.json
+cadastral_comparison_report.json
+district-fix-results.json
+land_import_schema_and_examples.json
+land_plots_import_template.json
+missing_plots_for_import.json
+plots-description-unique.json
+plots-description.json
+address-issues-report.json
+land-plots-coordinates.json
+
+# misc
+1
+tsconfig.tsbuildinfo
