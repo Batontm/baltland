@@ -468,13 +468,18 @@ function PlotPopupContent({ plot, bundlePlots }: { plot: LandPlot; bundlePlots: 
                     Записаться на просмотр
                 </button>
                 <Link
-                    href={`/plots/${primaryPlot.int_id || primaryPlot.id}/${slug}`}
+                    href={`/uchastok/${buildPlotSlug({
+                        location: primaryPlot.location,
+                        district: primaryPlot.district,
+                        areaSotok: totalArea,
+                        id: primaryPlot.int_id || primaryPlot.id
+                    })}`}
                     className="flex-1 text-center bg-[#f3f4f6] hover:bg-[#e5e7eb] text-[#1e293b] rounded-lg py-3 px-4 text-sm font-medium transition-colors border border-slate-200"
                 >
                     Открыть участок
                 </Link>
             </div>
-        </div>
+        </div >
     )
 }
 

@@ -54,9 +54,13 @@ export function YandexMap({ plots, selectedPlotId, onSelectPlot, mapSettings }: 
   const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 
   const plotHref = (p: LandPlot) => {
-    const area = Number(p.area_sotok) || 0
-    const slug = buildPlotSlug({ location: p.location, district: p.district, areaSotok: area })
-    return `/plots/${p.int_id || p.id}/${slug}`
+    const slug = buildPlotSlug({
+      location: p.location,
+      district: p.district,
+      areaSotok: Number(p.area_sotok) || 0,
+      id: p.int_id || p.id
+    })
+    return `/uchastok/${slug}`
   }
 
   useEffect(() => {

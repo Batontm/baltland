@@ -24,11 +24,14 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: new URL(baseUrl),
-    title,
-    description,
+    title: {
+      default: "БалтикЗемля — Земельные участки в Калининградской области",
+      template: "%s | БалтикЗемля"
+    },
+    description: "Продажа земельных участков в Калининградской области. Профессиональный подбор, юридическое сопровождение, честные цены.",
     generator: "v0.app",
     alternates: {
-      canonical: baseUrl,
+      canonical: "./",
     },
     openGraph: {
       title,
@@ -190,7 +193,15 @@ export default async function RootLayout({
       minValue: 5,
       maxValue: 15
     },
-    slogan: "Ваш уголок у Балтийского моря"
+    slogan: "Ваш уголок у Балтийского моря",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${baseUrl}/catalog?search={search_term_string}`
+      },
+      "query-input": "required name=search_term_string"
+    }
   }
 
   return (

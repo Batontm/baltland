@@ -54,9 +54,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }))
 
-  // Sitemap is generated at request/build time. Keep it "pure":
-  // - No Server Actions imports (they may call cookies()/headers())
-  // - Direct DB queries only
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return [...staticRoutes, ...seoRoutes]
   }
@@ -87,6 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const news = newsRes.error ? [] : (newsRes.data || [])
 
   const plotRoutes: MetadataRoute.Sitemap = (() => {
+    const out: MetadataRoute.Sitemap = []
     const byBundle = new Map<
       string,
       {
@@ -98,7 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const singles: any[] = []
 
-    for (const p of plots || []) {
+    for (const p of plots) {
       const bundleId = p?.bundle_id ? String(p.bundle_id) : ""
       const updatedAt = p?.updated_at ? new Date(p.updated_at) : undefined
       if (!bundleId) {
@@ -113,35 +111,79 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       byBundle.set(bundleId, entry)
     }
 
-    const out: MetadataRoute.Sitemap = []
-
+    // singles
     for (const p of singles) {
       const area = Number(p?.area_sotok) || 0
-      const slug = buildPlotSlug({ location: p?.location ?? null, district: p?.district ?? null, areaSotok: area })
+      const slug = buildPlotSlug({
+        location: p?.location || undefined,
+        district: p?.district || undefined,
+        areaSotok: area,
+        id: p.int_id || p.id
+      })
       out.push({
-        url: `${baseUrl}/plots/${p.int_id || p.id}/${slug}`,
+        url: `${baseUrl}/uchastok/${slug}`,
         lastModified: p.updated_at ? new Date(p.updated_at) : undefined,
         changeFrequency: "weekly",
         priority: 0.7,
       })
     }
 
+    // bundles
     for (const [bundleId, meta] of byBundle.entries()) {
-      const p = meta.primary
+      const p = meta.primary || plots.find((x) => String(x.bundle_id) === bundleId)
       if (!p) continue
+
       const slug = buildPlotSlug({
-        location: p?.location ?? null,
-        district: p?.district ?? null,
-        areaSotok: Number.isFinite(meta.totalArea) ? meta.totalArea : 0,
+        location: p?.location || undefined,
+        district: p?.district || undefined,
+        areaSotok: meta.totalArea,
+        id: p.int_id || p.id
       })
       out.push({
-        url: `${baseUrl}/plots/${p.int_id || p.id}/${slug}`,
+        url: `${baseUrl}/uchastok/${slug}`,
         lastModified: meta.lastModified,
         changeFrequency: "weekly",
         priority: 0.7,
       })
     }
 
+    return out
+  })()
+
+  // Dynamic Catalog routes
+  const catalogRoutes: MetadataRoute.Sitemap = (() => {
+    const out: MetadataRoute.Sitemap = []
+    const processedDistricts = new Set<string>()
+    const processedSettlements = new Set<string>()
+
+    for (const p of plots) {
+      if (p.district) {
+        const districtSlug = buildPlotSlug({ district: p.district })
+        if (!processedDistricts.has(districtSlug)) {
+          processedDistricts.add(districtSlug)
+          out.push({
+            url: `${baseUrl}/catalog/${districtSlug}`,
+            lastModified: now,
+            changeFrequency: "weekly",
+            priority: 0.8,
+          })
+        }
+
+        if (p.location) {
+          const settlementSlug = buildPlotSlug({ location: p.location })
+          const hierarchySlug = `${districtSlug}/${settlementSlug}`
+          if (!processedSettlements.has(hierarchySlug)) {
+            processedSettlements.add(hierarchySlug)
+            out.push({
+              url: `${baseUrl}/catalog/${hierarchySlug}`,
+              lastModified: now,
+              changeFrequency: "weekly",
+              priority: 0.7,
+            })
+          }
+        }
+      }
+    }
     return out
   })()
 
@@ -152,5 +194,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }))
 
-  return [...staticRoutes, ...seoRoutes, ...plotRoutes, ...newsRoutes]
+  return [...staticRoutes, ...seoRoutes, ...catalogRoutes, ...plotRoutes, ...newsRoutes]
 }

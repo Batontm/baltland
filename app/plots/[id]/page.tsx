@@ -18,6 +18,11 @@ export default async function PlotRedirectPage({ params }: PlotRedirectPageProps
     ? bundlePlots.reduce((sum, p) => sum + (Number(p.area_sotok) || 0), 0)
     : Number(plot.area_sotok) || 0
 
-  const slug = buildPlotSlug({ location: plot.location, district: plot.district, areaSotok: totalArea })
-  permanentRedirect(`/plots/${plot.int_id || plot.id}/${slug}`)
+  const slug = buildPlotSlug({
+    location: plot.location,
+    district: plot.district,
+    areaSotok: totalArea,
+    id: plot.int_id || plot.id
+  })
+  permanentRedirect(`/uchastok/${slug}`)
 }

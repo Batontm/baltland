@@ -10,6 +10,45 @@ import { HomeNewBlock } from "@/components/calming/home-new-block"
 import { ContactSection } from "@/components/calming/contact-section"
 import { Footer } from "@/components/calming/footer"
 import type { LandPlot, MapSettings, News } from "@/lib/types"
+import type { Metadata } from "next"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = "https://baltland.ru"
+  const title = "Купить участок ИЖС в Калининграде — от 100 тыс. ₽ | BaltLand"
+  const description = "Продажа земельных участков под ИЖС в Калининградской области. Более 12 лет помогаем людям обрести свой уголок у Балтийского моря. Честная цена, полное сопровождение."
+  const keywords = "купить участок, ИЖС, Калининград, Зеленоградск, Светлогорск, земельные участки, Балтийское море, недвижимость"
+
+  return {
+    title,
+    description,
+    keywords,
+    alternates: {
+      canonical: baseUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: baseUrl,
+      siteName: "БалтикЗемля",
+      locale: "ru_RU",
+      type: "website",
+      images: [
+        {
+          url: `${baseUrl}/og-image.png`,
+          width: 1200,
+          height: 630,
+          alt: "БалтикЗемля - Продажа участков в Калининградской области",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [`${baseUrl}/og-image.png`],
+    },
+  }
+}
 
 export default async function Home() {
   const supabase = await createClient()

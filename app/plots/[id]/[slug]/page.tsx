@@ -112,7 +112,7 @@ export async function generateMetadata({
   const baseUrl = "https://baltland.ru"
   const canonicalSlug = getCanonicalSlug(plot as any, totalArea)
   const canonicalId = plot.int_id ? String(plot.int_id) : plot.id
-  const canonical = `${baseUrl}/plots/${canonicalId}/${canonicalSlug}`
+  const canonical = `${baseUrl}/uchastok/${canonicalSlug}`
 
   const locationLabel = String(plot.location || "").trim() || String(plot.district || "").trim()
   const areaLabel = totalArea ? `${totalArea} сот.` : ""
@@ -247,9 +247,8 @@ export default async function PlotPage({ params }: PlotPageProps) {
   const canonicalSlug = getCanonicalSlug(plot as any, totalArea)
   const canonicalId = plot.int_id ? String(plot.int_id) : plot.id
 
-  if (slug !== canonicalSlug || id !== canonicalId) {
-    permanentRedirect(`/plots/${canonicalId}/${canonicalSlug}`)
-  }
+  // Always redirect to new SEO-friendly URL
+  permanentRedirect(`/uchastok/${canonicalSlug}`)
 
   const cadastralNumbers = plot.bundle_id
     ? bundlePlots

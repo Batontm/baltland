@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -72,6 +73,7 @@ interface InitialFilters {
   settlement?: string
   maxDistanceToSea?: number
   isNew?: string // "true" or "false"
+  page?: number
 }
 
 interface CatalogWithFiltersProps {
@@ -176,7 +178,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(initialFilters?.page || 1)
   const [itemsPerPage, setItemsPerPage] = useState(3)
 
   // Filter states
@@ -564,6 +566,33 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
     return out
   }, [bundleMetaById, pdFilteredPlots])
 
+  // Sync currentPage with URL searchParams
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const pageParam = searchParams.get("page")
+    if (pageParam) {
+      const p = parseInt(pageParam, 10)
+      if (Number.isFinite(p) && p !== currentPage) {
+        setCurrentPage(p)
+      }
+    } else if (currentPage !== 1 && !initialFilters?.page) {
+      // If no page param and we are not on page 1, reset to 1
+      // unless it was explicitly set in initialFilters
+      setCurrentPage(1)
+    }
+  }, [searchParams, initialFilters?.page])
+
+  const buildPageUrl = useCallback((page: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (page === 1) {
+      params.delete("page")
+    } else {
+      params.set("page", page.toString())
+    }
+    const qs = params.toString()
+    return `/catalog${qs ? `?${qs}` : ""}`
+  }, [searchParams])
+
   const totalPages = Math.ceil(filteredPlots.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
@@ -895,24 +924,23 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                       style={{ animationDelay: `${index * 0.1}s` }}
                     >
                       {/* Image */}
-                      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 p-3 border-b border-slate-200">
-                        <div className="relative w-full h-full rounded-2xl overflow-hidden bg-white shadow-inner">
-                          <Image
-                            src={plot.image_url || ""}
-                            alt={plot.title}
-                            fill
-                            className="object-contain group-hover:scale-105 transition-transform duration-700"
-                          />
-                        </div>
-
-                        <div className="absolute inset-3 rounded-2xl bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+                      <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
+                        <Image
+                          src={plot.image_url || ""}
+                          alt={plot.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
 
                         {/* Badges */}
-                        <div className="absolute top-4 left-4 flex gap-2">
-                          {plot.is_featured && <Badge className="bg-primary/90 backdrop-blur-sm rounded-full">Топ</Badge>}
+                        <div className="absolute top-3 left-3 flex flex-col gap-2">
+                          {plot.is_featured && (
+                            <Badge className="bg-emerald-600 text-white rounded-lg px-2.5 py-1 text-[10px] uppercase tracking-wider font-bold border-none shadow-sm">
+                              Топ
+                            </Badge>
+                          )}
                           <Badge
-                            variant="secondary"
-                            className="backdrop-blur-sm rounded-full bg-white/90 text-foreground"
+                            className="bg-white/95 text-slate-700 rounded-lg px-2.5 py-1 text-xs font-semibold border-none shadow-sm hover:bg-white transition-colors"
                           >
                             {plot.land_status}
                           </Badge>
@@ -924,28 +952,28 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                             e.stopPropagation()
                             toggleFavorite(plot.id)
                           }}
-                          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors"
+                          className="absolute top-3 right-3 w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-sm group/fav"
                         >
                           <Heart
-                            className={`h-5 w-5 transition-colors ${favorites.includes(plot.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
+                            className={`h-4.5 w-4.5 transition-colors ${favorites.includes(plot.id) ? "fill-red-500 text-red-500" : "text-slate-400 group-hover/fav:text-slate-600"
                               }`}
                           />
                         </button>
 
                         {/* Price Per Sotka */}
-                        <div className="absolute bottom-4 left-4">
-                          <span className="text-xs text-white/80 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                        <div className="absolute bottom-3 left-3">
+                          <span className="text-[10px] font-bold uppercase tracking-tight text-white bg-slate-900/40 backdrop-blur-md px-2.5 py-1 rounded-lg">
                             {formatPrice(
                               Math.round(
                                 (plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalPrice ?? plot.price : plot.price) /
                                 (plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea || plot.area_sotok : plot.area_sotok)
                               )
-                            )} за сотку
+                            )} / сот.
                           </span>
                         </div>
                       </div>
 
-                      <CardContent className="p-6">
+                      <CardContent className="p-5 flex-1 flex flex-col">
                         {/* Title / Size */}
                         <h3 className="text-lg font-semibold mb-1">
                           <span className="font-bold">
@@ -1440,24 +1468,42 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                     Страница {currentPage} из {totalPages}
                   </span>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-xl bg-transparent"
-                      onClick={handlePrevPage}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="default"
-                      className="rounded-xl px-6"
-                      onClick={handleNextPage}
-                      disabled={currentPage === totalPages}
-                    >
-                      Дальше
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
+                    {currentPage > 1 ? (
+                      <Link
+                        href={buildPageUrl(currentPage - 1)}
+                        className="inline-flex items-center justify-center rounded-xl border border-input bg-transparent h-10 w-10 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Link>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-xl bg-transparent opacity-50 cursor-not-allowed"
+                        disabled
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                    )}
+
+                    {currentPage < totalPages ? (
+                      <Link
+                        href={buildPageUrl(currentPage + 1)}
+                        className="inline-flex items-center justify-center rounded-xl bg-primary px-6 h-10 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        Дальше
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    ) : (
+                      <Button
+                        variant="default"
+                        className="rounded-xl px-6 opacity-50 cursor-not-allowed"
+                        disabled
+                      >
+                        Дальше
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
