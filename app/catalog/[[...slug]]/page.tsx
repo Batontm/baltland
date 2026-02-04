@@ -7,8 +7,9 @@ import { Footer } from "@/components/calming/footer"
 import type { LandPlot, MapSettings } from "@/lib/types"
 import { SEO_PAGES, SeoCatalogPageConfig } from "@/config/seo-pages"
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
-import { buildLocationSlug } from "@/lib/utils"
+import { buildLocationSlug, buildPlotSlug } from "@/lib/utils"
 import { Metadata } from "next"
+import { ItemListJsonLd } from "@/components/seo/item-list-jsonld"
 
 interface CatalogPageProps {
     params: Promise<{ slug?: string[] }>
@@ -194,6 +195,19 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
             <div className="sticky top-[4.5rem] z-40 bg-background/80 backdrop-blur-xl border-b border-border/50">
                 <div className="container mx-auto px-4 py-3">
                     <SiteBreadcrumb items={breadcrumbItems} />
+                    <ItemListJsonLd
+                        items={plots.slice(0, 12).map((plot, index) => ({
+                            name: plot.title || `Участок ${plot.area_sotok} сот.`,
+                            url: `https://baltland.ru/uchastok/${buildPlotSlug({
+                                location: plot.location,
+                                district: plot.district,
+                                areaSotok: Number(plot.area_sotok) || 0,
+                                id: plot.int_id || plot.id
+                            })}`,
+                            position: index + 1,
+                            image: plot.image_url || undefined
+                        }))}
+                    />
                 </div>
             </div>
 

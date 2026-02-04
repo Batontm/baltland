@@ -9,6 +9,7 @@ import { Header } from "@/components/calming/header"
 import { Footer } from "@/components/calming/footer"
 import type { Metadata } from 'next'
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
+import { NewsArticleJsonLd } from "@/components/seo/article-jsonld"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -65,6 +66,17 @@ export default async function NewsDetailPage({ params }: PageProps) {
               { label: "Новости", href: "/#news" },
               { label: newsItem.title, href: `/news/${id}` },
             ]}
+          />
+          <NewsArticleJsonLd
+            title={newsItem.title}
+            description={newsItem.content.substring(0, 160)}
+            image={newsItem.image_url}
+            datePublished={newsItem.published_at}
+            dateModified={newsItem.updated_at}
+            authorName={newsItem.author || "БалтикЗемля"}
+            publisherName="БалтикЗемля"
+            publisherLogo="https://baltland.ru/logo.png"
+            url={`https://baltland.ru/news/${id}`}
           />
         </div>
       </div>

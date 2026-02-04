@@ -143,6 +143,13 @@ export default async function RootLayout({
     priceRange: "₽₽",
     currenciesAccepted: "RUB",
     paymentAccepted: "Наличные, Банковский перевод, Рассрочка",
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      reviewCount: "156",
+      bestRating: "5",
+      worstRating: "1",
+    },
     address: {
       "@type": "PostalAddress",
       streetAddress: address || "ул. Брамса, 40",

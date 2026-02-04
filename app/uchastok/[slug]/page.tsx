@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { MapPin, Ruler, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { CallbackButtons } from "@/components/plots/callback-buttons"
+import { PlotJsonLd } from "@/components/seo/plot-jsonld"
 
 // Re-use logic from old page.tsx but adapted for the new [slug] format
 // We import it as dynamic to ensure metadata is generated correctly
@@ -156,9 +157,17 @@ export default async function PlotSitemapPage({ params }: { params: Promise<{ sl
 
     breadcrumbItems.push({ label: plotLabel, href: `/uchastok/${expectedSlug}` })
 
+    const plotUrl = `https://baltland.ru/uchastok/${expectedSlug}`
+
     return (
         <div className="min-h-screen bg-background">
             <Header />
+            <PlotJsonLd
+                plot={plot as LandPlot}
+                totalArea={totalArea}
+                price={price}
+                url={plotUrl}
+            />
 
             <div className="sticky top-[4.5rem] z-40 bg-background/80 backdrop-blur-xl border-b border-border/50">
                 <SiteBreadcrumb
@@ -174,7 +183,7 @@ export default async function PlotSitemapPage({ params }: { params: Promise<{ sl
                         bundlePlots={bundlePlots as LandPlot[]}
                         totalArea={totalArea}
                         price={price}
-                        phone={settings?.phone}
+                        phone={settings?.phone || undefined}
                     />
                 </div>
             </section>

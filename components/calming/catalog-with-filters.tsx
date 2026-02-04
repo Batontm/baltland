@@ -927,7 +927,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                       <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
                         <Image
                           src={plot.image_url || ""}
-                          alt={plot.title}
+                          alt={plot.title || `Земельный участок ${plot.area_sotok} сот. в ${plot.location || plot.district || "Калининградской области"}`}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-700"
                         />

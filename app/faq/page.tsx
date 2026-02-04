@@ -7,6 +7,7 @@ import Link from "next/link"
 import { FaqContactForm } from "@/components/calming/faq-contact-form"
 import type { Metadata } from "next"
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
+import { FAQJsonLd } from "@/components/seo/faq-jsonld"
 
 export const metadata: Metadata = {
     title: "Помощь покупателю | Частые вопросы | БалтикЗемля",
@@ -41,6 +42,12 @@ export default async function FaqPage() {
             <div className="container mx-auto max-w-4xl mb-6">
                 <SiteBreadcrumb
                     items={[{ label: "Помощь", href: "/faq" }]}
+                />
+                <FAQJsonLd
+                    items={allFaqItems.map(item => ({
+                        question: item.question,
+                        answer: item.answer
+                    }))}
                 />
             </div>
             <div className="max-w-4xl mx-auto space-y-12">

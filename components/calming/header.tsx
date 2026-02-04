@@ -23,6 +23,7 @@ export function Header() {
   const navItems = [
     { label: "Каталог", href: "/#catalog" },
     { label: "Новости", href: "/#news" },
+    { label: "О компании", href: "/about" },
     { label: "Помощь покупателю", href: "/faq" },
     { label: "Контакты", href: "/#contact" },
   ]

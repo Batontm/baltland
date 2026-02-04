@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 
 interface HeroSectionProps {
   plotCount?: number
@@ -54,12 +55,14 @@ export function HeroSection({ plotCount = 0, minPrice = 0, maxPrice = 0 }: HeroS
           <div className="relative w-full lg:w-3/5 h-[400px] sm:h-[500px] lg:h-[650px] z-0">
             {/* Image container with rounded corners */}
             <div className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-2xl border border-white/10">
-              {/* Main landscape image with overlay */}
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage: `url('/kaliningrad-map-hero.webp')`,
-                }}
+              {/* Main landscape image - Optimized for SEO and performance */}
+              <Image
+                src="/kaliningrad-map-hero.webp"
+                alt="Продажа земельных участков ИЖС в Калининградской области — БалтикЗемля"
+                fill
+                priority
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 60vw"
               />
 
               {/* Animated gradient overlay for depth */}
@@ -168,7 +171,7 @@ export function HeroSection({ plotCount = 0, minPrice = 0, maxPrice = 0 }: HeroS
           <div className="w-full lg:w-1/2 mt-8 lg:mt-0 lg:-ml-[12%] relative z-20">
             {/* Header Glass Block */}
             <div className="bg-white/40 backdrop-blur-3xl p-8 sm:p-10 lg:p-14 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/20 border-l-white/40 mb-10">
-              {/* Main Heading */}
+              {/* Main Heading - H1 optimized for SEO */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-medium leading-tight mb-8 animate-slide-up">
                 <span className="block whitespace-nowrap">Земельные участки</span>
                 <span className="block text-primary mt-2">в Калининграде</span>

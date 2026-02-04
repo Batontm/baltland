@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import Image from "next/image"
 import { ChevronLeft, ChevronRight, Ruler, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import type { LandPlot } from "@/lib/types"
@@ -91,10 +91,12 @@ export function SimilarPlotsSlider({ plots }: SimilarPlotsSliderProps) {
                                 <div className="h-full bg-white rounded-3xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 group/card flex flex-col">
                                     <div className="aspect-[4/3] bg-muted relative w-full overflow-hidden">
                                         {sp.image_url ? (
-                                            <img
+                                            <Image
                                                 src={sp.image_url}
-                                                alt={sp.title || "Участок"}
-                                                className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
+                                                alt={sp.title || `Земельный участок ${spArea} сот. в ${sp.location || sp.district || "Калининградской области"}`}
+                                                fill
+                                                className="object-cover group-hover/card:scale-105 transition-transform duration-500"
+                                                sizes="(max-width: 768px) 280px, 33vw"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">

@@ -197,8 +197,9 @@ export function formatPlotPost(plot: {
     id: string
     int_id?: number
 }): string {
-    const title = plot.title || `Участок ${plot.area_sotok || 0} сот.`
     const location = plot.location || plot.district || ""
+    // Construct specific title for VK: "Участок [площадь] сот. [поселок]"
+    const title = `Участок ${plot.area_sotok || 0} сот. ${location}`.trim()
 
     // Format price
     const price = plot.price
