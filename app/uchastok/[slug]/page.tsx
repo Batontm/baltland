@@ -3,7 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation"
 import type { Metadata } from "next"
 import { getLandPlotBundleById, getOrganizationSettings, getSimilarPlots } from "@/app/actions"
 import type { LandPlot } from "@/lib/types"
-import { buildPlotSlug, parseIdFromSlug } from "@/lib/utils"
+import { buildPlotSlug, formatArea, parseIdFromSlug } from "@/lib/utils"
 import { Header } from "@/components/calming/header"
 import { Footer } from "@/components/calming/footer"
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
@@ -71,8 +71,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     })
 
     const cadastral = plot.cadastral_number ? `КН ${plot.cadastral_number}` : ""
-    const title = `Участок ${totalArea} сот. в ${plot.location || plot.district}${cadastral ? ` | ${cadastral}` : ""}`
-    const description = truncate(toPlainText(plot.description || ""), 160) || `Земельный участок ${totalArea} соток в ${plot.location || plot.district}.`
+    const areaStr = formatArea(totalArea)
+    const title = `Участок ${areaStr} в ${plot.location || plot.district}${cadastral ? ` | ${cadastral}` : ""}`
+    const description = truncate(toPlainText(plot.description || ""), 160) || `Земельный участок ${areaStr} в ${plot.location || plot.district}.`
 
     return {
         title: `${title} | БалтикЗемля`,
@@ -124,7 +125,8 @@ export default async function PlotSitemapPage({ params }: { params: Promise<{ sl
 
     const price = Number(primaryPlot?.price ?? plot.price)
     const cadastral = plot.cadastral_number ? `КН ${plot.cadastral_number}` : ""
-    const plotLabel = `Участок ${totalArea} сот. ${cadastral || (plot.location || plot.district || "Калининградская область")}`
+    const areaStr = formatArea(totalArea)
+    const plotLabel = `Участок ${areaStr} ${cadastral || (plot.location || plot.district || "Калининградская область")}`
 
     const similarPlots = await getSimilarPlots(plot.id, plot.district, 12)
 
@@ -206,14 +208,19 @@ export default async function PlotSitemapPage({ params }: { params: Promise<{ sl
                             <Ruler className="h-4 w-4" />
                             {totalArea} соток
                         </span>
+                        {plot.land_status && (
+                            <span className="inline-flex items-center px-4 py-2 bg-slate-100 text-slate-700 rounded-full">
+                                {plot.land_status}
+                            </span>
+                        )}
                     </div>
 
                     <CallbackButtons
                         phone={settings?.phone}
-                        plotTitle={plot.title || `Участок ${totalArea} сот.`}
+                        plotTitle={plot.title || `Участок ${areaStr}`}
                         cadastralNumber={plot.cadastral_number}
                         plotId={plot.id}
-                        location={plot.location}
+                        location={plot.location || undefined}
                         price={price}
                         areaSotok={totalArea}
                     />

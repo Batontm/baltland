@@ -218,6 +218,8 @@ export async function generateStaticMapImage(options: MapImageOptions): Promise<
 
     try {
         const page = await browser.newPage()
+        // Set custom User-Agent to comply with OSM Tile Usage Policy
+        await page.setUserAgent("BaltlandMapGenerator/1.0 (https://baltland.ru; info@baltland.ru)")
         await page.setViewport({ width, height })
         await page.setContent(html, { waitUntil: "networkidle0" })
 

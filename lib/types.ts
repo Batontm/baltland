@@ -171,6 +171,8 @@ export const LAND_STATUS_OPTIONS = [
   { value: "СНТ", label: "СНТ" },
   { value: "ДНП", label: "ДНП" },
   { value: "ЛПХ", label: "ЛПХ" },
+  { value: "СХ", label: "СХ" },
+  { value: "Промка", label: "Промка" },
 ] as const
 
 export interface Subscriber {

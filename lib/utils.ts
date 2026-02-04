@@ -97,3 +97,19 @@ export function parseIdFromSlug(slug: string) {
   const parts = slug.split("-")
   return parts[parts.length - 1] || null
 }
+
+/**
+ * Formats area in sotok and adds hectare label if area >= 100
+ */
+export function formatArea(sotok: number | string | null | undefined) {
+  const val = typeof sotok === "string" ? parseFloat(sotok) : Number(sotok)
+  if (!val || isNaN(val)) return ""
+
+  const formattedSotok = val.toLocaleString("ru-RU", { maximumFractionDigits: 2 })
+  if (val >= 100) {
+    const ha = (val / 100).toLocaleString("ru-RU", { maximumFractionDigits: 2 })
+    // In Russian "3.5 гектара" (genitive singular for fractions)
+    return `${formattedSotok} сот. (${ha} гектара)`
+  }
+  return `${formattedSotok} сот.`
+}

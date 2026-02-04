@@ -920,7 +920,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                 return (
                   <Link key={plot.id} href={plotUrl} className="block">
                     <Card
-                      className="group overflow-hidden rounded-3xl border-border/50 bg-card hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1 cursor-pointer"
+                      className="group overflow-hidden rounded-3xl border-border/50 bg-card hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1 cursor-pointer p-0 gap-0"
                       style={{ animationDelay: `${index * 0.1}s` }}
                     >
                       {/* Image */}

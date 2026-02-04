@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { FloatingChat } from "@/components/chat/floating-chat"
 import { Toaster } from "@/components/ui/toaster"
 import { YandexMetrika } from "@/components/analytics/yandex-metrika"
+import { CookieConsent } from "@/components/ui/cookie-consent"
 import { createClient } from "@/lib/supabase/server"
 import "./globals.css"
 
@@ -219,7 +220,7 @@ export default async function RootLayout({
         <Toaster />
         <FloatingChat />
         <YandexMetrika />
-
+        <CookieConsent />
       </body>
     </html>
   )
