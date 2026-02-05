@@ -98,6 +98,40 @@ export function parseIdFromSlug(slug: string) {
   return parts[parts.length - 1] || null
 }
 
+export function buildDistrictSeoSegment(district: string | null | undefined) {
+  const raw = String(district || "")
+    .replace(/,?\s*Калининградская область/gi, "")
+    .trim()
+  if (!raw) return "kaliningradskaya-oblast"
+  return slugify(
+    raw
+      .replace(/район/gi, "r-n")
+      .replace(/городской округ/gi, "go")
+  )
+}
+
+export function buildSettlementSeoSegment(location: string | null | undefined) {
+  const raw = String(location || "").trim()
+  if (!raw) return "bez-np"
+  return slugify(raw.replace(/^(пос|п|г|с|д)\.?\s+/i, ""))
+}
+
+export function parseIntIdFromPlotSeoSlug(slug: string) {
+  const m = String(slug || "").match(/prodazha-uchastka-(\d+)$/i)
+  return m?.[1] || null
+}
+
+export function buildPlotSeoPath(input: {
+  district?: string | null
+  location?: string | null
+  intId?: number | string | null
+}) {
+  const districtSeg = buildDistrictSeoSegment(input.district)
+  const settlementSeg = buildSettlementSeoSegment(input.location)
+  const id = input.intId ? String(input.intId) : ""
+  return `/${districtSeg}/${settlementSeg}/prodazha-uchastka-${id}`
+}
+
 /**
  * Formats area in sotok and adds hectare label if area >= 100
  */

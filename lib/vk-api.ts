@@ -2,7 +2,7 @@
  * VK API Client for publishing land plots
  */
 
-import { buildPlotSlug } from "@/lib/utils"
+import { buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
 
 const VK_API_BASE = "https://api.vk.com/method"
 
@@ -224,13 +224,11 @@ export function formatPlotPost(plot: {
     }
 
     // Build URL
-    const plotSlug = buildPlotSlug({
-        location: (plot as any).location,
+    const url = `https://baltland.ru${buildPlotSeoPath({
         district: (plot as any).district,
-        areaSotok: Number((plot as any).area_sotok) || 0,
-        id: (plot as any).int_id || plot.id
-    })
-    const url = `https://baltland.ru/uchastok/${plotSlug}`
+        location: (plot as any).location,
+        intId: (plot as any).int_id || plot.id,
+    })}`
 
     // Build message
     const lines = [

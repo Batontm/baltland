@@ -40,6 +40,7 @@ export interface CadastralObject {
     geometry: NspdGeometry;
     centroid_wgs84: [number, number] | null; // [latitude, longitude]
     geometry_type: string;
+    quarter_cad_number?: string;
     land_category?: string;
     permitted_use?: string;
     area?: number;

@@ -7,7 +7,7 @@ import { Footer } from "@/components/calming/footer"
 import type { LandPlot, MapSettings } from "@/lib/types"
 import { SEO_PAGES, SeoCatalogPageConfig } from "@/config/seo-pages"
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
-import { buildLocationSlug, buildPlotSlug } from "@/lib/utils"
+import { buildLocationSlug, buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
 import { Metadata } from "next"
 import { ItemListJsonLd } from "@/components/seo/item-list-jsonld"
 
@@ -198,11 +198,10 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
                     <ItemListJsonLd
                         items={plots.slice(0, 12).map((plot, index) => ({
                             name: plot.title || `Участок ${plot.area_sotok} сот.`,
-                            url: `https://baltland.ru/uchastok/${buildPlotSlug({
-                                location: plot.location,
+                            url: `https://baltland.ru${buildPlotSeoPath({
                                 district: plot.district,
-                                areaSotok: Number(plot.area_sotok) || 0,
-                                id: plot.int_id || plot.id
+                                location: plot.location,
+                                intId: plot.int_id || plot.id,
                             })}`,
                             position: index + 1,
                             image: plot.image_url || undefined

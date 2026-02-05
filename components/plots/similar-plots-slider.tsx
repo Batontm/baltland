@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import type { LandPlot } from "@/lib/types"
-import { buildPlotSlug } from "@/lib/utils"
+import { buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
 
 interface SimilarPlotsSliderProps {
     plots: LandPlot[]
@@ -81,13 +81,19 @@ export function SimilarPlotsSlider({ plots }: SimilarPlotsSliderProps) {
                     })
                     const spPrice = Number(sp.price) || 0
 
+                    const spUrl = buildPlotSeoPath({
+                        district: sp.district || undefined,
+                        location: sp.location || undefined,
+                        intId: sp.int_id || sp.id,
+                    })
+
                     return (
                         <div
                             key={sp.id}
                             data-slider-item
                             className="flex-none w-[280px] md:w-[calc(33.333%-16px)] snap-start"
                         >
-                            <Link href={`/uchastok/${spSlug}`}>
+                            <Link href={spUrl}>
                                 <div className="h-full bg-white rounded-3xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 group/card flex flex-col">
                                     <div className="aspect-[4/3] bg-muted relative w-full overflow-hidden">
                                         {sp.image_url ? (

@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { LandPlot } from "@/lib/types"
-import { buildPlotSlug } from "@/lib/utils"
+import { buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
 
 import "leaflet/dist/leaflet.css"
 
@@ -468,12 +468,11 @@ function PlotPopupContent({ plot, bundlePlots }: { plot: LandPlot; bundlePlots: 
                     Записаться на просмотр
                 </button>
                 <Link
-                    href={`/uchastok/${buildPlotSlug({
-                        location: primaryPlot.location,
+                    href={buildPlotSeoPath({
                         district: primaryPlot.district,
-                        areaSotok: totalArea,
-                        id: primaryPlot.int_id || primaryPlot.id
-                    })}`}
+                        location: primaryPlot.location,
+                        intId: primaryPlot.int_id || primaryPlot.id,
+                    })}
                     className="flex-1 text-center bg-[#f3f4f6] hover:bg-[#e5e7eb] text-[#1e293b] rounded-lg py-3 px-4 text-sm font-medium transition-colors border border-slate-200"
                 >
                     Открыть участок

@@ -5,7 +5,8 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { MapPin, Ruler, Zap, Flame, Heart, ArrowRight, Grid3X3, List } from "lucide-react"
+import { MapPin, Ruler, Zap, Flame, Share2, ArrowRight, Grid3X3, List } from "lucide-react"
+import { SharePopup } from "@/components/ui/share-popup"
 
 const plots = [
   {
@@ -99,12 +100,7 @@ function formatPrice(price: number): string {
 }
 
 export function CatalogSection() {
-  const [favorites, setFavorites] = useState<number[]>([2, 5])
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-
-  const toggleFavorite = (id: number) => {
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]))
-  }
 
   return (
     <section id="catalog" className="py-20 bg-gradient-to-b from-background to-secondary/20">
@@ -169,16 +165,15 @@ export function CatalogSection() {
                     </Badge>
                   </div>
 
-                  {/* Favorite Button */}
-                  <button
-                    onClick={() => toggleFavorite(plot.id)}
-                    className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors"
-                  >
-                    <Heart
-                      className={`h-5 w-5 transition-colors ${favorites.includes(plot.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                        }`}
-                    />
-                  </button>
+                  {/* Share Button */}
+                  <SharePopup
+                    url={`/plot/demo-${plot.id}`}
+                    title={`Участок ${plot.status}`}
+                    price={plot.price}
+                    area={plot.size}
+                    location={plot.location}
+                    className="absolute top-4 right-4"
+                  />
 
                   {/* Price Per Sotka */}
                   <div className="absolute bottom-4 left-4">
@@ -262,15 +257,13 @@ export function CatalogSection() {
                         <h3 className="text-xl font-semibold">
                           Земля под {plot.status}, {plot.size} сотки
                         </h3>
-                        <button
-                          onClick={() => toggleFavorite(plot.id)}
-                          className="p-2 rounded-full hover:bg-secondary/50 transition-colors"
-                        >
-                          <Heart
-                            className={`h-5 w-5 transition-colors ${favorites.includes(plot.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                              }`}
-                          />
-                        </button>
+                        <SharePopup
+                          url={`/plot/demo-${plot.id}`}
+                          title={`Участок ${plot.status}`}
+                          price={plot.price}
+                          area={plot.size}
+                          location={plot.location}
+                        />
                       </div>
 
                       <div className="flex items-center gap-2 text-muted-foreground mb-4">

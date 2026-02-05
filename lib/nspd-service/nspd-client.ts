@@ -12,6 +12,22 @@ export class NspdClient {
     private proxy: string | null = null;
     private proxyAgent: HttpsProxyAgent<string> | null = null;
 
+    private isRetryableProxyError(error: any): boolean {
+        const code = String(error?.cause?.code || error?.code || "").toUpperCase();
+        const msg = String(error?.cause?.message || error?.message || "").toUpperCase();
+        const hay = `${code} ${msg}`;
+
+        return (
+            hay.includes("ECONNREFUSED") ||
+            hay.includes("ETIMEDOUT") ||
+            hay.includes("ECONNRESET") ||
+            hay.includes("EHOSTUNREACH") ||
+            hay.includes("ENETUNREACH") ||
+            hay.includes("EAI_AGAIN") ||
+            hay.includes("SOCKET HANG UP")
+        );
+    }
+
     constructor(options: { proxy?: string | null } = {}) {
         this.proxy = options.proxy || process.env.NSPD_PROXY || null;
 
@@ -83,13 +99,24 @@ export class NspdClient {
             const nodeFetch = await import("node-fetch").then(m => m.default).catch(() => null);
 
             if (nodeFetch) {
-                // Use proxy agent if configured, otherwise use httpsAgent for SSL bypass
-                const agent = this.proxyAgent || httpsAgent;
-                response = await nodeFetch(url, {
-                    method: "GET",
-                    headers,
-                    agent,
-                }) as unknown as Response;
+                const tryFetch = async (agent: any) => {
+                    return (await nodeFetch(url, {
+                        method: "GET",
+                        headers,
+                        agent,
+                    })) as unknown as Response;
+                };
+
+                try {
+                    response = await tryFetch(this.proxyAgent || httpsAgent);
+                } catch (e: any) {
+                    if (this.proxyAgent && this.isRetryableProxyError(e)) {
+                        console.warn(`[NspdClient] Proxy request failed, retrying direct: ${e?.cause?.code || e?.code || e?.message || e}`);
+                        response = await tryFetch(httpsAgent);
+                    } else {
+                        throw e;
+                    }
+                }
             } else {
                 // Fallback to native fetch (may fail on self-signed certs)
                 console.warn("[NspdClient] node-fetch not available, SSL errors may occur");
@@ -114,6 +141,17 @@ export class NspdClient {
                 return { data: null, error: "Объект не найден в НСПД" };
             }
 
+            const props: any = (feature as any)?.properties || {};
+            const readableAddress =
+                props?.options && typeof props.options === "object" ? props.options.readable_address : null;
+            const addressFromProps =
+                props.address ||
+                readableAddress ||
+                props.descr ||
+                props.label ||
+                props?.options?.label ||
+                null;
+
             const geometry = feature.geometry;
             const centroid = this.calculateCentroid(geometry);
 
@@ -125,15 +163,18 @@ export class NspdClient {
 
             return {
                 data: {
-                    cadastralNumber: feature.properties.cadastral_number || cadastralNumber,
-                    address: feature.properties.address || null,
+                    cadastralNumber: props.cadastral_number || cadastralNumber,
+                    address: addressFromProps,
                     geometry: geometry,
                     centroid_wgs84: centroidWgs84,
                     geometry_type: geometry.type,
-                    land_category: feature.properties.category_id || undefined,
-                    permitted_use: feature.properties.utilization_id || undefined,
-                    area: feature.properties.area_value || undefined,
-                    area_unit: feature.properties.area_unit || undefined,
+                    quarter_cad_number: (props?.options && typeof props.options === "object")
+                        ? (props.options.quarter_cad_number || props.options.quarterCadNumber || undefined)
+                        : undefined,
+                    land_category: props.category_id || undefined,
+                    permitted_use: props.utilization_id || undefined,
+                    area: props.area_value || undefined,
+                    area_unit: props.area_unit || undefined,
                 }
             };
         } catch (error: any) {

@@ -3733,6 +3733,111 @@ export async function resolveLocationByCadastral(cadastralNumber: string): Promi
 }> {
   const { client, coordsOrder } = await getConfiguredNspdClient()
 
+  const normalizeSettlementHint = (value: string) => {
+    let s = String(value || "").trim()
+    if (!s) return ""
+    s = s.replace(/^вблизи\s+/i, "").trim()
+    s = s.replace(/^в\s*близи\s+/i, "").trim()
+    s = s.replace(/^район\s+/i, "").trim()
+    s = s.replace(/\s+(снт|ст|днт|тсн|садоводческое\s+товарищество)\b.*$/i, "").trim()
+    s = s.replace(/^пос[её]л(?:о|о)к\s+/i, "").trim()
+    s = s.replace(/^пос[её]лка\s+/i, "").trim()
+    s = s.replace(/^п\.?\s+/i, "").trim()
+    s = s.replace(/^пос\.?\s+/i, "").trim()
+    s = s.replace(/^г\.?\s+/i, "").trim()
+    s = s.replace(/^с\.?\s+/i, "").trim()
+    s = s.replace(/^д\.?\s+/i, "").trim()
+    s = s.replace(/["“”«»]/g, "").trim()
+    if (s.includes(" ")) s = s.split(" ")[0].trim()
+    return s
+  }
+
+  const resolveViaKladrPlaces = async (settlementName: string, districtName?: string) => {
+    const supabase = createAdminClient()
+    const cleanName = String(settlementName || "").trim()
+    if (!cleanName) return null
+
+    let districtCodePrefix: string | null = null
+    const districtHint = String(districtName || "").trim()
+    if (districtHint) {
+      const { data: districtData } = await supabase
+        .from("kladr_places")
+        .select("code")
+        .or("socr.eq.р-н,socr.eq.г.о.,socr.eq.городской округ,socr.eq.район")
+        .ilike("name", `%${districtHint.split(" ")[0]}%`)
+        .limit(1)
+        .maybeSingle()
+
+      const code = (districtData as any)?.code
+      if (typeof code === "string" && code.length >= 5) districtCodePrefix = code.substring(0, 5)
+    }
+
+    let query = supabase
+      .from("kladr_places")
+      .select("code,name,socr")
+      .or("socr.eq.г,socr.eq.п,socr.eq.пос,socr.eq.с,socr.eq.д,socr.eq.пгт")
+      .ilike("name", `%${cleanName}%`)
+
+    if (districtCodePrefix) {
+      query = query.like("code", `${districtCodePrefix}%`)
+    }
+
+    const { data } = await query.order("name", { ascending: true }).limit(10)
+    const rows = (data || []) as Array<{ code: string; name: string; socr: string | null }>
+    if (rows.length === 0) return null
+
+    const best = rows.find((r) => String(r.name || "").toLowerCase() === cleanName.toLowerCase()) || rows[0]
+    const rawPrefix = (best.socr || "").toLowerCase()
+    let standardizedPrefix = ""
+    if (rawPrefix === "п" || rawPrefix === "пос" || rawPrefix === "п." || rawPrefix === "пос.") {
+      standardizedPrefix = "пос. "
+    } else if (rawPrefix === "г" || rawPrefix === "г.") {
+      standardizedPrefix = "г. "
+    } else if (rawPrefix === "с" || rawPrefix === "с.") {
+      standardizedPrefix = "с. "
+    } else if (rawPrefix === "д" || rawPrefix === "д.") {
+      standardizedPrefix = "д. "
+    } else if (rawPrefix === "пгт" || rawPrefix === "пгт.") {
+      standardizedPrefix = "пгт. "
+    } else if (best.socr) {
+      standardizedPrefix = best.socr + ". "
+    }
+
+    return `${standardizedPrefix}${best.name}`.trim()
+  }
+
+  const resolveViaQuarterMajority = async (quarterCadNumber?: string) => {
+    const quarter = String(quarterCadNumber || "").trim()
+    if (!quarter) return null
+
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from("land_plots")
+      .select("location")
+      .like("cadastral_number", `${quarter}%`)
+      .not("location", "is", null)
+      .limit(2000)
+
+    const rows = (data || []) as Array<{ location: string | null }>
+    const counts = new Map<string, number>()
+
+    for (const r of rows) {
+      const loc = String(r.location || "").trim()
+      if (!loc) continue
+      if (loc === "пос. Прислово - Синявино") continue
+      if (loc === "пос. Синявино-Прислово") continue
+      if (loc === "п. Зачерчье") continue
+      counts.set(loc, (counts.get(loc) || 0) + 1)
+    }
+
+    let best: { loc: string; count: number } | null = null
+    for (const [loc, count] of counts.entries()) {
+      if (!best || count > best.count) best = { loc, count }
+    }
+
+    return best?.loc || null
+  }
+
   try {
     const { data: info, error: nspdError } = await client.getObjectInfo(cadastralNumber, coordsOrder)
 
@@ -3755,28 +3860,53 @@ export async function resolveLocationByCadastral(cadastralNumber: string): Promi
     let detectedDistrictName = "";
     let detectedSettlementName = ""; // Can be settlement or city
 
-    // 1. Detect District Hint from string
+    const settlementAnywhereMatch =
+      nspdAddress.match(/(?:^|[\s,])(?:вблизи\s+)?пос[её]л(?:о)?к(?:а)?\s+([^,]+)/i) ||
+      nspdAddress.match(/(?:^|[\s,])(?:вблизи\s+)?п\.?\s+([^,]+)/i) ||
+      nspdAddress.match(/(?:^|[\s,])(?:вблизи\s+)?пос\.?\s+([^,]+)/i)
+
+    // 1. Detect District Part from string (e.g. "р-н", "городской округ", "муниципальный округ")
     const districtPart = parts.find(p =>
-      p.includes("р-н") || p.includes("г.о.") || p.includes("городской округ") || p.includes("район")
+      p.includes("р-н") ||
+      p.includes("г.о.") ||
+      p.includes("городской округ") ||
+      p.includes("муниципальный округ") ||
+      p.includes("м.о.") ||
+      p.includes("район")
     );
 
     if (districtPart) {
       detectedDistrictName = districtPart
-        .replace(/р-н|г\.о\.|городской округ|район/g, "")
+        .replace(/р-н|г\.о\.|м\.о\.|городской округ|муниципальный округ|район/g, "")
         .trim();
     }
 
     // 2. Detect Settlement Hint from string
-    const settlementMarkers = ["г ", "п ", "пос ", "с ", "д ", "ст-ца ", "х "];
-    const settlementPart = parts.find(p =>
-      settlementMarkers.some(marker => p.startsWith(marker)) ||
-      p.includes(" г") || p.includes(" п ") || p.includes(" пос")
+    const settlementMarkers = ["г ", "г.", "п ", "п.", "пос ", "пос.", "с ", "с.", "д ", "д.", "ст-ца ", "х "];
+    const settlementPartStarts = parts.find(p =>
+      settlementMarkers.some(marker => p.startsWith(marker))
     );
+    const settlementPartIncludes = parts.find(p =>
+      /(?:^|\s)(г\.?|п\.?|пос\.?|пос[её]л(?:о)?к(?:а)?|пос[её]лка)(?:\s|$)/i.test(p)
+    );
+    const settlementPart = settlementPartStarts || settlementPartIncludes;
+
+    const settlementRegexMatch =
+      nspdAddress.match(/(?:^|[\s,])(?:вблизи\s+)?(?:пос\.?|п\.?|пос[её]л(?:о)?к(?:а)?|пос[её]лка)\s+([^,]+)/i)
 
     if (settlementPart) {
       detectedSettlementName = settlementPart
+        .replace(/пос[её]л(?:о)?к(?:а)?\s+|пос[её]лка\s+/gi, "")
+        .replace(/^вблизи\s+/i, "")
+        .replace(/^в\s*близи\s+/i, "")
+        .replace(/(^|\s)пос[её]л(?:о)?к(?:а)?(\s|$)/gi, " ")
+        .replace(/(^|\s)пос[её]лка(\s|$)/gi, " ")
         .replace(/г\.|п\.|пос\.|с\.|д\.|ст-ца|х\.|г |п |пос |с |д /g, "")
         .trim();
+    } else if (settlementAnywhereMatch) {
+      detectedSettlementName = String(settlementAnywhereMatch[1] || "").trim()
+    } else if (settlementRegexMatch) {
+      detectedSettlementName = String(settlementRegexMatch[1] || "").trim()
     } else if (!districtPart && parts.length > 2) {
       // Fallback usually for city districts if no explicit district part
       // e.g. "Калининградская обл, г Калининград, ..."
@@ -3795,7 +3925,8 @@ export async function resolveLocationByCadastral(cadastralNumber: string): Promi
 
     // Find matching settlements from the constant list
     const candidates = KALININGRAD_SETTLEMENTS.filter(s => {
-      const settlementMatches = detectedSettlementName && s.name.toLowerCase().includes(detectedSettlementName.toLowerCase());
+      const cleanHint = normalizeSettlementHint(detectedSettlementName)
+      const settlementMatches = cleanHint && s.name.toLowerCase().includes(cleanHint.toLowerCase());
       // If district is detected, require it to match. If not detected, allow loose settlement match (risky, but useful)
       const districtMatches = detectedDistrictName
         ? s.district.toLowerCase().replace(" район", "").includes(detectedDistrictName.toLowerCase())
@@ -3819,6 +3950,20 @@ export async function resolveLocationByCadastral(cadastralNumber: string): Promi
       // Special case
       finalDistrictName = "г. Калининград";
       finalSettlementName = "г. Калининград";
+    } else {
+      const cleanHint = normalizeSettlementHint(detectedSettlementName)
+      if (cleanHint) {
+        const kladrResolved = await resolveViaKladrPlaces(cleanHint, detectedDistrictName)
+        if (kladrResolved) {
+          finalSettlementName = kladrResolved
+        }
+      }
+
+      if (!finalSettlementName) {
+        const quarter = (info as any)?.quarter_cad_number
+        const majority = await resolveViaQuarterMajority(quarter)
+        if (majority) finalSettlementName = majority
+      }
     }
 
     // Fallback: If no settlement found but district found

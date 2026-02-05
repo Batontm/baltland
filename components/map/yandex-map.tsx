@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertCircle, Loader2 } from "lucide-react"
 import type { LandPlot, MapSettings } from "@/lib/types"
-import { buildPlotSlug } from "@/lib/utils"
+import { buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,13 +54,11 @@ export function YandexMap({ plots, selectedPlotId, onSelectPlot, mapSettings }: 
   const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 
   const plotHref = (p: LandPlot) => {
-    const slug = buildPlotSlug({
-      location: p.location,
+    return buildPlotSeoPath({
       district: p.district,
-      areaSotok: Number(p.area_sotok) || 0,
-      id: p.int_id || p.id
+      location: p.location,
+      intId: p.int_id || p.id,
     })
-    return `/uchastok/${slug}`
   }
 
   useEffect(() => {

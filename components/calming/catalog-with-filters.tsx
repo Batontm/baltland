@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { buildPlotSlug } from "@/lib/utils"
+import { buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -28,7 +28,6 @@ import {
   Ruler,
   Zap,
   Flame,
-  Heart,
   ArrowRight,
   Grid3X3,
   List,
@@ -41,6 +40,7 @@ import {
   ChevronRight,
   ChevronDown,
 } from "lucide-react"
+import { SharePopup } from "@/components/ui/share-popup"
 import { type LandPlot, type MapSettings, LAND_STATUS_OPTIONS } from "@/lib/types"
 import { PlotMapDialog } from "@/components/map/plot-map-dialog"
 import { CatalogInteractiveMap } from "@/components/map/catalog-interactive-map"
@@ -174,7 +174,6 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
     return Math.min(...plotsWithPrice.map((plot) => plot.price))
   }, [visiblePlots])
 
-  const [favorites, setFavorites] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showAdvanced, setShowAdvanced] = useState(false)
 
@@ -618,9 +617,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
     }
   }
 
-  const toggleFavorite = (id: string) => {
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]))
-  }
+
 
   const resetFilters = () => {
     setDistrict("")
@@ -916,7 +913,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedPlots.map((plot, index) => {
                 const plotSlug = buildPlotSlug({ location: plot.location, district: plot.district, areaSotok: plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea ?? plot.area_sotok : plot.area_sotok })
-                const plotUrl = `/plots/${plot.int_id || plot.id}/${plotSlug}`
+                const plotUrl = buildPlotSeoPath({ district: plot.district, location: plot.location, intId: plot.int_id || plot.id })
                 return (
                   <Link key={plot.id} href={plotUrl} className="block">
                     <Card
@@ -946,19 +943,16 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                           </Badge>
                         </div>
 
-                        {/* Favorite Button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleFavorite(plot.id)
-                          }}
-                          className="absolute top-3 right-3 w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-sm group/fav"
-                        >
-                          <Heart
-                            className={`h-4.5 w-4.5 transition-colors ${favorites.includes(plot.id) ? "fill-red-500 text-red-500" : "text-slate-400 group-hover/fav:text-slate-600"
-                              }`}
-                          />
-                        </button>
+                        {/* Share Button */}
+                        <SharePopup
+                          url={`${typeof window !== 'undefined' ? window.location.origin : ''}/plot/${buildPlotSlug(plot)}`}
+                          title={`Участок ${plot.land_status}`}
+                          cadastralNumber={plot.cadastral_number || undefined}
+                          price={plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalPrice ?? plot.price : plot.price}
+                          area={plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea : plot.area_sotok}
+                          location={[plot.location, plot.district?.replace(/,?\s*Калининградская область/i, "").trim()].filter(Boolean).join(", ")}
+                          className="absolute top-3 right-3"
+                        />
 
                         {/* Price Per Sotka */}
                         <div className="absolute bottom-3 left-3">
@@ -1068,7 +1062,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
             <div className="space-y-4">
               {paginatedPlots.map((plot, index) => {
                 const plotSlug = buildPlotSlug({ location: plot.location, district: plot.district, areaSotok: plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea ?? plot.area_sotok : plot.area_sotok })
-                const plotUrl = `/plots/${plot.int_id || plot.id}/${plotSlug}`
+                const plotUrl = buildPlotSeoPath({ district: plot.district, location: plot.location, intId: plot.int_id || plot.id })
                 return (
                   <Link key={plot.id} href={plotUrl} className="block">
                     <Card
@@ -1147,18 +1141,14 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                                   <span>{plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea : plot.area_sotok} сот.</span>
                                 </div>
                               </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleFavorite(plot.id)
-                                }}
-                                className="p-2 rounded-full hover:bg-secondary/50 transition-colors"
-                              >
-                                <Heart
-                                  className={`h-5 w-5 transition-colors ${favorites.includes(plot.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                                    }`}
-                                />
-                              </button>
+                              <SharePopup
+                                url={`${typeof window !== 'undefined' ? window.location.origin : ''}/plot/${buildPlotSlug(plot)}`}
+                                title={`Участок ${plot.land_status}`}
+                                cadastralNumber={plot.cadastral_number || undefined}
+                                price={plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalPrice ?? plot.price : plot.price}
+                                area={plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea : plot.area_sotok}
+                                location={[plot.location, plot.district?.replace(/,?\s*Калининградская область/i, "").trim()].filter(Boolean).join(", ")}
+                              />
                             </div>
 
                             <div className="flex flex-wrap gap-2">

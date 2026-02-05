@@ -2,7 +2,7 @@ import { MetadataRoute } from "next"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { SEO_PAGES } from "@/config/seo-pages"
-import { buildPlotSlug } from "@/lib/utils"
+import { buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://baltland.ru"
@@ -114,14 +114,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // singles
     for (const p of singles) {
       const area = Number(p?.area_sotok) || 0
-      const slug = buildPlotSlug({
-        location: p?.location || undefined,
+      const urlPath = buildPlotSeoPath({
         district: p?.district || undefined,
-        areaSotok: area,
-        id: p.int_id || p.id
+        location: p?.location || undefined,
+        intId: p.int_id || p.id,
       })
       out.push({
-        url: `${baseUrl}/uchastok/${slug}`,
+        url: `${baseUrl}${urlPath}`,
         lastModified: p.updated_at ? new Date(p.updated_at) : undefined,
         changeFrequency: "weekly",
         priority: 0.7,
@@ -133,14 +132,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const p = meta.primary || plots.find((x) => String(x.bundle_id) === bundleId)
       if (!p) continue
 
-      const slug = buildPlotSlug({
-        location: p?.location || undefined,
+      const urlPath = buildPlotSeoPath({
         district: p?.district || undefined,
-        areaSotok: meta.totalArea,
-        id: p.int_id || p.id
+        location: p?.location || undefined,
+        intId: p.int_id || p.id,
       })
       out.push({
-        url: `${baseUrl}/uchastok/${slug}`,
+        url: `${baseUrl}${urlPath}`,
         lastModified: meta.lastModified,
         changeFrequency: "weekly",
         priority: 0.7,
