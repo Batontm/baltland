@@ -8,6 +8,7 @@ import {
     parseIntIdFromPlotSeoSlug,
     buildDistrictSeoSegment,
     buildSettlementSeoSegment,
+    buildLocationSlug,
 } from "@/lib/utils"
 import { Header } from "@/components/calming/header"
 import { Footer } from "@/components/calming/footer"
@@ -16,6 +17,7 @@ import { SimilarPlotsSlider } from "@/components/plots/similar-plots-slider"
 import { PlotHeroMapWrapper } from "@/components/plots/plot-hero-map-wrapper"
 import { MapPin, Ruler } from "lucide-react"
 import { CallbackButtons } from "@/components/plots/callback-buttons"
+import { DirectionsButton } from "@/components/plots/directions-button"
 import { PlotJsonLd } from "@/components/seo/plot-jsonld"
 
 function truncate(input: string, maxLen: number) {
@@ -26,6 +28,50 @@ function truncate(input: string, maxLen: number) {
 function formatPriceRub(value: number) {
     if (!Number.isFinite(value) || value <= 0) return ""
     return new Intl.NumberFormat("ru-RU").format(value) + " руб."
+}
+
+function renderRichText(input: string) {
+    const withBold = input
+        .replace(/<\s*b\s*>/gi, "**")
+        .replace(/<\s*\/\s*b\s*>/gi, "**")
+
+    const escaped = withBold
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\r\n/g, "\n")
+
+    // Check if there's a disclaimer block
+    const disclaimerMarker = "❗ Важно о деталях:"
+    const disclaimerIndex = escaped.indexOf(disclaimerMarker)
+
+    if (disclaimerIndex !== -1) {
+        const mainContent = escaped.substring(0, disclaimerIndex).trim()
+        const disclaimerContent = escaped.substring(disclaimerIndex)
+
+        const mainHtml = mainContent
+            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+            .replace(/\n/g, "<br />")
+
+        const disclaimerHtml = disclaimerContent
+            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+            .replace(/\n/g, "<br />")
+
+        return (
+            <>
+                <span dangerouslySetInnerHTML={{ __html: mainHtml }} />
+                <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
+                    <span dangerouslySetInnerHTML={{ __html: disclaimerHtml }} />
+                </div>
+            </>
+        )
+    }
+
+    const html = escaped
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\n/g, "<br />")
+
+    return <span dangerouslySetInnerHTML={{ __html: html }} />
 }
 
 function buildPlotMetaDescription(plot: LandPlot, totalArea: number, priceRaw: number) {
@@ -137,8 +183,20 @@ export default async function PlotSeoPage({
     const similarPlots = await getSimilarPlots(plot.id, plot.district, 12)
 
     const areaStr = formatArea(totalArea)
-    const cadastral = plot.cadastral_number ? `КН ${plot.cadastral_number}` : ""
-    const plotLabel = `Участок ${areaStr} ${cadastral || (plot.location || plot.district || "Калининградская область")}`
+    const isBundle = bundlePlots.length > 1
+    
+    // Для bundle собираем все КН
+    const allCadastralNumbers = isBundle
+        ? bundlePlots.map(p => p.cadastral_number).filter(Boolean)
+        : plot.cadastral_number ? [plot.cadastral_number] : []
+    
+    // Для bundle не показываем КН в заголовке (все КН будут ниже отдельной строкой)
+    const cadastralDisplay = isBundle 
+        ? "" 
+        : (allCadastralNumbers.length > 0 ? `КН ${allCadastralNumbers[0]}` : "")
+    
+    const bundleLabel = isBundle ? ` (${bundlePlots.length} участка)` : ""
+    const plotLabel = `Участок ${areaStr}${bundleLabel}${cadastralDisplay ? ` ${cadastralDisplay}` : (!isBundle ? ` ${plot.location || plot.district || "Калининградская область"}` : "")}`
 
     const primaryPlot = plot.bundle_id
         ? bundlePlots.find((p) => p.is_bundle_primary) ?? plot
@@ -152,10 +210,15 @@ export default async function PlotSeoPage({
     const breadcrumbItems = [{ label: "Каталог", href: "/catalog" }]
 
     if (plot.district) {
-        breadcrumbItems.push({ label: plot.district, href: "/catalog" })
-        if (plot.location) breadcrumbItems.push({ label: plot.location, href: "/catalog" })
+        const districtSlug = buildLocationSlug(plot.district)
+        breadcrumbItems.push({ label: plot.district, href: `/catalog/${districtSlug}` })
+        if (plot.location) {
+            const settlementSlug = buildLocationSlug(plot.location)
+            breadcrumbItems.push({ label: plot.location, href: `/catalog/${districtSlug}/${settlementSlug}` })
+        }
     } else if (plot.location) {
-        breadcrumbItems.push({ label: plot.location, href: "/catalog" })
+        const settlementSlug = buildLocationSlug(plot.location)
+        breadcrumbItems.push({ label: plot.location, href: `/catalog/${settlementSlug}` })
     }
 
     breadcrumbItems.push({ label: plotLabel, href: expectedPath })
@@ -183,7 +246,12 @@ export default async function PlotSeoPage({
 
             <section className="relative -mt-16 z-10 container mx-auto px-4">
                 <div className="max-w-4xl mx-auto bg-white shadow-lg p-6 rounded-3xl">
-                    <h1 className="text-2xl md:text-3xl font-semibold mb-2">{plotLabel}</h1>
+                    <h1 className="text-2xl md:text-3xl font-semibold mb-1">{plotLabel}</h1>
+                    {isBundle && allCadastralNumbers.length > 1 && (
+                        <p className="text-base font-bold text-foreground mb-2">
+                            КН: {allCadastralNumbers.join(', ')}
+                        </p>
+                    )}
                     <div className="flex items-center gap-1.5 text-muted-foreground mb-4">
                         <MapPin className="h-4 w-4 shrink-0" />
                         <span>
@@ -206,24 +274,51 @@ export default async function PlotSeoPage({
                         )}
                     </div>
 
-                    <CallbackButtons
-                        phone={settings?.phone}
-                        plotTitle={plot.title || `Участок ${areaStr}`}
-                        cadastralNumber={plot.cadastral_number}
-                        plotId={plot.id}
-                        location={plot.location || undefined}
-                        price={price}
-                        areaSotok={totalArea}
-                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                        <CallbackButtons
+                            phone={settings?.phone}
+                            plotTitle={plot.title || `Участок ${areaStr}`}
+                            cadastralNumber={plot.cadastral_number}
+                            plotId={plot.id}
+                            location={plot.location || undefined}
+                            price={price}
+                            areaSotok={totalArea}
+                        />
+                        <DirectionsButton lat={plot.center_lat} lon={plot.center_lon} />
+                    </div>
                 </div>
             </section>
 
             <main className="container mx-auto px-4 py-12">
                 <div className="max-w-4xl mx-auto space-y-12">
+                    {/* Информация о bundle (продажа одним лотом) */}
+                    {isBundle && (
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h3 className="font-semibold text-blue-800 mb-2">
+                                🏷️ Продажа одним лотом: {bundlePlots.length} участка
+                            </h3>
+                            <p className="text-sm text-blue-700 mb-3">
+                                Общая площадь: <strong>{totalArea} соток</strong> ({(totalArea / 100).toFixed(2)} га)
+                            </p>
+                            <div className="text-sm text-blue-700">
+                                <strong>Кадастровые номера:</strong>
+                                <ul className="mt-1 space-y-1">
+                                    {bundlePlots.map((bp, idx) => (
+                                        <li key={bp.id}>
+                                            {idx + 1}. КН {bp.cadastral_number} — {bp.area_sotok} сот.
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+
                     {plot.description && (
                         <div>
                             <h2 className="text-xl font-bold mb-4">Описание</h2>
-                            <div className="text-muted-foreground leading-relaxed whitespace-pre-line">{plot.description}</div>
+                            <div className="text-muted-foreground leading-relaxed">
+                                {renderRichText(plot.description)}
+                            </div>
                         </div>
                     )}
                 </div>

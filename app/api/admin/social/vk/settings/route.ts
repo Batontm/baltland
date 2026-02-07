@@ -17,19 +17,31 @@ export async function GET() {
             console.error('[VK Settings API] Error:', error)
         }
 
-        return NextResponse.json(data || {
+        // Extract publish_time from nested settings JSON if present
+        const result = data || {
             platform: 'vk',
             enabled: false,
             daily_limit: 10,
-            auto_delete_sold: true
-        })
+            auto_delete_sold: true,
+            settings: {}
+        }
+        
+        // Flatten publish_time from settings JSON to top level for frontend
+        if (result.settings?.publish_time) {
+            result.publish_time = result.settings.publish_time
+        } else {
+            result.publish_time = '10:00'
+        }
+        
+        return NextResponse.json(result)
     } catch (error) {
         console.error('[VK Settings API] Error:', error)
         return NextResponse.json({
             platform: 'vk',
             enabled: false,
             daily_limit: 10,
-            auto_delete_sold: true
+            auto_delete_sold: true,
+            publish_time: '10:00'
         })
     }
 }
@@ -40,7 +52,22 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json()
-        const { enabled, daily_limit, auto_delete_sold } = body
+        const { enabled, daily_limit, auto_delete_sold, publish_time } = body
+
+        // First get current settings to preserve other fields in settings JSON
+        const { data: current } = await supabase
+            .from('social_settings')
+            .select('settings')
+            .eq('platform', 'vk')
+            .single()
+
+        const currentSettings = current?.settings || {}
+        
+        // Update settings JSON with new publish_time
+        const updatedSettings = {
+            ...currentSettings,
+            publish_time: publish_time || '10:00'
+        }
 
         const { data, error } = await supabase
             .from('social_settings')
@@ -49,6 +76,7 @@ export async function POST(request: NextRequest) {
                 enabled: enabled ?? false,
                 daily_limit: daily_limit || 10,
                 auto_delete_sold: auto_delete_sold ?? true,
+                settings: updatedSettings,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'platform' })
             .select()
@@ -63,7 +91,7 @@ export async function POST(request: NextRequest) {
         await supabase.from('social_logs').insert({
             platform: 'vk',
             action: 'settings',
-            message: `Настройки обновлены: ${enabled ? 'вкл' : 'выкл'}, лимит: ${daily_limit}/день`
+            message: `Настройки обновлены: ${enabled ? 'вкл' : 'выкл'}, лимит: ${daily_limit}/день, время: ${publish_time || '10:00'}`
         })
 
         return NextResponse.json({ success: true, settings: data })

@@ -9,15 +9,6 @@ import { createClient } from "@/lib/supabase/server"
 import "./globals.css"
 
 export async function generateMetadata(): Promise<Metadata> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from("organization_settings")
-    .select("favicon_url")
-    .eq("id", "00000000-0000-0000-0000-000000000001")
-    .maybeSingle()
-
-  const faviconUrl = (data as any)?.favicon_url ? String((data as any).favicon_url) : null
-
   const baseUrl = "https://baltland.ru"
   const title = "Купить участок ИЖС в Калининграде — от 100 тыс. ₽ | BaltLand"
   const description =
@@ -55,34 +46,22 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description,
     },
-    icons: faviconUrl
-      ? {
-        icon: [{ url: faviconUrl }],
-      }
-      : {
-        icon: [
-          {
-            url: "/favicon-120.png",
-            sizes: "120x120",
-            type: "image/png",
-          },
-          {
-            url: "/favicon.ico",
-            sizes: "32x32",
-            type: "image/x-icon",
-          },
-          {
-            url: "/icon-light-32x32.png",
-            media: "(prefers-color-scheme: light)",
-          },
-          {
-            url: "/icon-dark-32x32.png",
-            media: "(prefers-color-scheme: dark)",
-          },
-        ],
-        shortcut: "/favicon.ico",
-        apple: "/apple-icon.png",
-      },
+    icons: {
+      icon: [
+        {
+          url: "/favicon-120.png",
+          sizes: "120x120",
+          type: "image/png",
+        },
+        {
+          url: "/favicon.ico",
+          sizes: "32x32",
+          type: "image/x-icon",
+        },
+      ],
+      shortcut: "/favicon.ico",
+      apple: "/apple-icon.png",
+    },
   }
 }
 

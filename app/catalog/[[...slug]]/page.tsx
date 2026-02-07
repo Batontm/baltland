@@ -7,9 +7,17 @@ import { Footer } from "@/components/calming/footer"
 import type { LandPlot, MapSettings } from "@/lib/types"
 import { SEO_PAGES, SeoCatalogPageConfig } from "@/config/seo-pages"
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
-import { buildLocationSlug, buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
+import { buildLocationSlug, buildPlotSeoPath, buildPlotSlug, buildDistrictSeoSegment, buildSettlementSeoSegment } from "@/lib/utils"
 import { Metadata } from "next"
 import { ItemListJsonLd } from "@/components/seo/item-list-jsonld"
+
+function pluralPlots(n: number): string {
+    const mod10 = n % 10
+    const mod100 = n % 100
+    if (mod10 === 1 && mod100 !== 11) return 'участок'
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'участка'
+    return 'участков'
+}
 
 interface CatalogPageProps {
     params: Promise<{ slug?: string[] }>
@@ -54,11 +62,12 @@ async function resolveHierarchy(slugs: string[]): Promise<SeoCatalogPageConfig |
 
         if (plots) {
             const districts = Array.from(new Set(plots.map(p => p.district).filter(Boolean)))
-            const match = districts.find(d => buildLocationSlug(d!) === slug)
+            const match = districts.find(d => buildLocationSlug(d!) === slug || buildDistrictSeoSegment(d!) === slug)
             if (match) {
+                const count = plots.filter(p => p.district === match).length
                 return {
                     title: `Участки в ${match} | БалтикЗемля`,
-                    description: `Продажа земельных участков в ${match}. Актуальные предложения и цены.`,
+                    description: `Продажа земельных участков в ${match}. ${count} ${pluralPlots(count)} в продаже.`,
                     h1: `Участки в ${match}`,
                     filter: { district: match }
                 }
@@ -78,14 +87,15 @@ async function resolveHierarchy(slugs: string[]): Promise<SeoCatalogPageConfig |
         if (plots) {
             const match = plots.find(p =>
                 p.location && p.district &&
-                buildLocationSlug(p.district) === districtSlug &&
-                buildLocationSlug(p.location) === settlementSlug
+                (buildLocationSlug(p.district) === districtSlug || buildDistrictSeoSegment(p.district) === districtSlug) &&
+                (buildLocationSlug(p.location) === settlementSlug || buildSettlementSeoSegment(p.location) === settlementSlug)
             )
 
             if (match) {
+                const count = plots.filter(p => p.location === match.location && p.district === match.district).length
                 return {
                     title: `Участки в ${match.location}, ${match.district} | БалтикЗемля`,
-                    description: `Продажа земельных участков в ${match.location} (${match.district}). Актуальные предложения, цены и характеристики.`,
+                    description: `Продажа земельных участков в ${match.location} (${match.district}). ${count} ${pluralPlots(count)} в продаже.`,
                     h1: `Участки в ${match.location}`,
                     filter: { district: match.district!, settlement: match.location! }
                 }

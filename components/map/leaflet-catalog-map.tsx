@@ -20,20 +20,24 @@ import "leaflet/dist/leaflet.css"
 
 // Smooth transitions CSS (250-300ms as per best practices)
 const smoothCSS = `
-/* Zoom animation on tiles */
+/* Smooth tile fade-in */
 .leaflet-tile-container {
-  transition: opacity 0.25s ease-in-out;
+  transition: opacity 0.4s ease-in-out;
 }
+.leaflet-tile {
+  transition: opacity 0.4s ease-in-out;
+}
+/* Smooth zoom transform */
 .leaflet-zoom-anim .leaflet-zoom-animated {
-  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 /* Polygon transitions */
 .leaflet-overlay-pane svg path {
-  transition: stroke-width 0.25s ease, fill-opacity 0.25s ease, d 0.25s ease;
+  transition: stroke-width 0.4s ease, fill-opacity 0.5s ease, opacity 0.5s ease, d 0.3s ease;
 }
 /* Marker transitions */
 .leaflet-marker-pane .leaflet-marker-icon {
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s ease;
 }
 /* Custom teardrop cluster icons */
 .custom-cluster-icon {
@@ -48,9 +52,37 @@ const smoothCSS = `
 .marker-cluster div {
   background: transparent !important;
 }
-/* Spiderfy animation */
+/* Spiderfy animation - smooth spread */
 .leaflet-marker-icon.leaflet-interactive {
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s ease;
+}
+/* Cluster appear/disappear animation */
+@keyframes clusterFadeIn {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes clusterFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.5); }
+}
+.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+  animation: clusterFadeIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+/* Smooth cluster icon transitions */
+.custom-cluster-icon {
+  transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s ease !important;
+}
+/* Smooth pane transitions for level switching */
+.leaflet-marker-pane {
+  transition: opacity 0.6s ease;
+}
+.leaflet-overlay-pane {
+  transition: opacity 0.4s ease;
+}
+/* Smooth marker cluster group transitions */
+.leaflet-cluster-anim .leaflet-marker-icon,
+.leaflet-cluster-anim .leaflet-marker-shadow {
+  transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s ease !important;
 }
 /* Cadastral number labels on polygons */
 .cadastral-label {
@@ -323,11 +355,11 @@ function FlyToSelected({ plots, selectedPlotId }: { plots: ParsedPlot[]; selecte
             map.flyToBounds(bounds, {
                 padding: [50, 50],
                 maxZoom: 17,
-                duration: 0.5
+                duration: 1.2,
+                easeLinearity: 0.25,
             })
         } else if (plot.center[0] !== 0 || plot.center[1] !== 0) {
-            // Otherwise fly to center point
-            map.flyTo(plot.center, 16, { duration: 0.5 })
+            map.flyTo(plot.center, 16, { duration: 1.2, easeLinearity: 0.25 })
         }
     }, [map, selectedPlotId, plots])
 
@@ -509,7 +541,70 @@ const ZOOM_THRESHOLDS = {
     POLYGON_MIN: 16,      // 16+: Polygons, markers hidden
 }
 
-// ZoomTracker component to track current zoom level
+// Adaptive scroll zoom: faster scrolling = bigger zoom steps, slower = smaller steps
+function AdaptiveScrollZoom() {
+    const map = useMap()
+
+    useEffect(() => {
+        if (!map) return
+
+        // Disable default scroll zoom
+        map.scrollWheelZoom.disable()
+
+        let accumulatedDelta = 0
+        let lastWheelTime = 0
+        let zoomTimeout: ReturnType<typeof setTimeout> | null = null
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault()
+            e.stopPropagation()
+
+            const now = Date.now()
+            const timeDiff = now - lastWheelTime
+            lastWheelTime = now
+
+            // Reset accumulator if pause > 200ms
+            if (timeDiff > 200) {
+                accumulatedDelta = 0
+            }
+
+            accumulatedDelta += Math.abs(e.deltaY)
+
+            // Calculate zoom step based on scroll speed
+            // Slow scroll (small delta) = 0.25 step, fast scroll = up to 1.5 steps
+            const speed = Math.min(accumulatedDelta / 150, 1)  // 0..1
+            const zoomStep = 0.25 + speed * 1.25  // 0.25..1.5
+
+            const direction = e.deltaY > 0 ? -1 : 1
+
+            if (zoomTimeout) clearTimeout(zoomTimeout)
+
+            zoomTimeout = setTimeout(() => {
+                const currentZoom = map.getZoom()
+                const targetZoom = Math.round((currentZoom + direction * zoomStep) * 4) / 4  // snap to 0.25
+                const mouseLatLng = map.containerPointToLatLng(
+                    L.point(e.clientX - map.getContainer().getBoundingClientRect().left,
+                            e.clientY - map.getContainer().getBoundingClientRect().top)
+                )
+                map.setZoomAround(mouseLatLng, targetZoom, { animate: true })
+                accumulatedDelta = 0
+            }, 30)
+        }
+
+        const container = map.getContainer()
+        container.addEventListener('wheel', handleWheel, { passive: false })
+
+        return () => {
+            container.removeEventListener('wheel', handleWheel)
+            if (zoomTimeout) clearTimeout(zoomTimeout)
+            map.scrollWheelZoom.enable()
+        }
+    }, [map])
+
+    return null
+}
+
+// ZoomTracker component to track current zoom level (tracks both zoom and zoomend for smoother transitions)
 function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
     const map = useMap()
 
@@ -524,10 +619,41 @@ function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void })
         handleZoom()
 
         map.on('zoomend', handleZoom)
+        map.on('zoom', handleZoom)
         return () => {
             map.off('zoomend', handleZoom)
+            map.off('zoom', handleZoom)
         }
     }, [map, onZoomChange])
+
+    return null
+}
+
+// Smoothly fade marker pane opacity based on zoom level (fade out near polygon threshold)
+function MarkerPaneFader({ currentZoom }: { currentZoom: number }) {
+    const map = useMap()
+
+    useEffect(() => {
+        if (!map) return
+        const pane = map.getPane('markerPane')
+        if (!pane) return
+
+        // Fade markers between zoom 15 and 16
+        const fadeStart = ZOOM_THRESHOLDS.POLYGON_MIN - 1  // 15
+        const fadeEnd = ZOOM_THRESHOLDS.POLYGON_MIN         // 16
+
+        if (currentZoom >= fadeEnd) {
+            pane.style.opacity = '0'
+            pane.style.pointerEvents = 'none'
+        } else if (currentZoom > fadeStart) {
+            const progress = (currentZoom - fadeStart) / (fadeEnd - fadeStart)
+            pane.style.opacity = String(1 - progress)
+            pane.style.pointerEvents = 'auto'
+        } else {
+            pane.style.opacity = '1'
+            pane.style.pointerEvents = 'auto'
+        }
+    }, [map, currentZoom])
 
     return null
 }
@@ -702,11 +828,13 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                 className="absolute inset-0 z-0"
                 zoomControl={false}
                 attributionControl={false}
-                scrollWheelZoom={true}
-                zoomSnap={1}
-                zoomDelta={1}
+                scrollWheelZoom={false}
+                zoomSnap={0.25}
+                zoomDelta={0.5}
+                wheelPxPerZoomLevel={250}
                 fadeAnimation={true}
                 zoomAnimation={true}
+                zoomAnimationThreshold={6}
                 preferCanvas={true}
             >
                 <style>{smoothCSS}</style>
@@ -714,9 +842,9 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                     key={mapType}
                     url={TILE_LAYERS[mapType].url}
                     attribution={TILE_LAYERS[mapType].attribution}
-                    keepBuffer={2}
-                    updateWhenZooming={false}
-                    updateWhenIdle={true}
+                    keepBuffer={4}
+                    updateWhenZooming={true}
+                    updateWhenIdle={false}
                 />
 
                 {/* Polygons - visible always, but more prominent at zoom 16+ */}
@@ -726,11 +854,15 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                     const color = getPlotColor(plot)
                     const bundlePlots = bundlePlotsById.get((plot as any).bundle_id) || [plot]
 
-                    // Polygons always visible, but more prominent at detail level or when selected/hovered
+                    // Polygons always visible, smoothly increase prominence near detail level
                     const isDetailLevel = currentZoom >= ZOOM_THRESHOLDS.POLYGON_MIN
                     const isHighlighted = isSelected || isHovered
-                    const fillOpacity = isSelected ? 0.7 : (isHovered ? 0.55 : (isDetailLevel ? 0.5 : 0.35))
-                    const strokeWeight = isHighlighted ? 4 : (isDetailLevel ? 3 : 2)
+                    // Smooth opacity ramp between zoom 14 and 16
+                    const zoomProgress = Math.min(1, Math.max(0, (currentZoom - 14) / 2))
+                    const baseFillOpacity = 0.25 + zoomProgress * 0.25  // 0.25 → 0.5
+                    const fillOpacity = isSelected ? 0.7 : (isHovered ? 0.55 : baseFillOpacity)
+                    const baseStrokeWeight = 1.5 + zoomProgress * 1.5  // 1.5 → 3
+                    const strokeWeight = isHighlighted ? 4 : baseStrokeWeight
 
                     return plot.polygons.map((ring, idx) => (
                         <Polygon
@@ -765,12 +897,15 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                     ))
                 })}
 
-                {/* Markers with clustering - hidden at zoom 16+ (polygon detail level) */}
-                {currentZoom < ZOOM_THRESHOLDS.POLYGON_MIN && (
+                <MarkerPaneFader currentZoom={currentZoom} />
+
+                {/* Markers with clustering - fade out smoothly near polygon level */}
+                {currentZoom < ZOOM_THRESHOLDS.POLYGON_MIN + 0.5 && (
                     <MarkerClusterGroup
                         chunkedLoading
-                        spiderfyOnMaxZoom={false}
-                        spiderLegPolylineOptions={{ opacity: 0 }}
+                        spiderfyOnMaxZoom={true}
+                        spiderfyDistanceMultiplier={1.5}
+                        spiderLegPolylineOptions={{ opacity: 0.3, weight: 1, color: '#94a3b8' }}
                         showCoverageOnHover={false}
                         maxClusterRadius={50}
                         disableClusteringAtZoom={ZOOM_THRESHOLDS.CLUSTER_MAX + 1}
@@ -803,6 +938,7 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                     </MarkerClusterGroup>
                 )}
 
+                <AdaptiveScrollZoom />
                 <FitBoundsToPlots plots={parsedPlots} />
                 <ZoomTracker onZoomChange={handleZoomChange} />
                 <FlyToSelected plots={parsedPlots} selectedPlotId={selectedPlotId} />

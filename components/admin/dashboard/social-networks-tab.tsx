@@ -44,6 +44,7 @@ interface AutoPublishSettings {
     enabled: boolean
     dailyLimit: number
     autoDeleteSold: boolean
+    publishTime: string
 }
 
 export function SocialNetworksTab() {
@@ -59,7 +60,8 @@ export function SocialNetworksTab() {
     const [autoSettings, setAutoSettings] = useState<AutoPublishSettings>({
         enabled: false,
         dailyLimit: 10,
-        autoDeleteSold: true
+        autoDeleteSold: true,
+        publishTime: '10:00'
     })
     const [savingSettings, setSavingSettings] = useState(false)
 
@@ -116,7 +118,8 @@ export function SocialNetworksTab() {
                 setAutoSettings({
                     enabled: data.enabled || false,
                     dailyLimit: data.daily_limit || 10,
-                    autoDeleteSold: data.auto_delete_sold ?? true
+                    autoDeleteSold: data.auto_delete_sold ?? true,
+                    publishTime: data.publish_time || '10:00'
                 })
             }
         } catch (error) {
@@ -133,7 +136,8 @@ export function SocialNetworksTab() {
                 body: JSON.stringify({
                     enabled: autoSettings.enabled,
                     daily_limit: autoSettings.dailyLimit,
-                    auto_delete_sold: autoSettings.autoDeleteSold
+                    auto_delete_sold: autoSettings.autoDeleteSold,
+                    publish_time: autoSettings.publishTime
                 })
             })
 
@@ -252,63 +256,89 @@ export function SocialNetworksTab() {
 
             {/* Auto-publish Settings */}
             <Card>
-                <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                        <Settings2 className="h-5 w-5" />
-                        Автопубликация
-                    </CardTitle>
-                    <CardDescription>
-                        Автоматическая публикация новых участков по расписанию
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            {autoSettings.enabled ? (
-                                <Badge className="bg-green-100 text-green-700">
-                                    <Play className="h-3 w-3 mr-1" /> Включено
-                                </Badge>
-                            ) : (
-                                <Badge variant="secondary">
-                                    <Pause className="h-3 w-3 mr-1" /> Выключено
-                                </Badge>
-                            )}
+                        <div>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <Settings2 className="h-5 w-5" />
+                                Автопубликация
+                            </CardTitle>
+                            <CardDescription className="mt-1">
+                                Ежедневная публикация новых участков в указанное время
+                            </CardDescription>
                         </div>
                         <Switch
                             checked={autoSettings.enabled}
-                            onCheckedChange={(checked) => setAutoSettings(prev => ({ ...prev, enabled: checked }))}
+                            onCheckedChange={async (checked) => {
+                                setAutoSettings(prev => ({ ...prev, enabled: checked }))
+                                // Auto-save on toggle
+                                setSavingSettings(true)
+                                try {
+                                    await fetch('/api/admin/social/vk/settings', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            enabled: checked,
+                                            daily_limit: autoSettings.dailyLimit,
+                                            auto_delete_sold: autoSettings.autoDeleteSold,
+                                            publish_time: autoSettings.publishTime
+                                        })
+                                    })
+                                    toast({ title: checked ? 'Автопубликация включена' : 'Автопубликация выключена' })
+                                } catch {
+                                    toast({ title: 'Ошибка сохранения', variant: 'destructive' })
+                                } finally {
+                                    setSavingSettings(false)
+                                }
+                            }}
                         />
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Публикаций в день</Label>
-                            <Input
-                                type="number"
-                                min={1}
-                                max={100}
-                                value={autoSettings.dailyLimit}
-                                onChange={(e) => setAutoSettings(prev => ({
-                                    ...prev,
-                                    dailyLimit: parseInt(e.target.value) || 10
-                                }))}
-                            />
+                </CardHeader>
+                {autoSettings.enabled && (
+                    <CardContent className="pt-0 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">Время публикации</Label>
+                                <Input
+                                    type="time"
+                                    value={autoSettings.publishTime}
+                                    onChange={(e) => setAutoSettings(prev => ({
+                                        ...prev,
+                                        publishTime: e.target.value
+                                    }))}
+                                    className="h-9"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">Публикаций в день</Label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={100}
+                                    value={autoSettings.dailyLimit}
+                                    onChange={(e) => setAutoSettings(prev => ({
+                                        ...prev,
+                                        dailyLimit: parseInt(e.target.value) || 10
+                                    }))}
+                                    className="h-9"
+                                />
+                            </div>
+                            <div className="flex items-end gap-2 pb-1">
+                                <Switch
+                                    id="auto-delete"
+                                    checked={autoSettings.autoDeleteSold}
+                                    onCheckedChange={(checked) => setAutoSettings(prev => ({ ...prev, autoDeleteSold: checked }))}
+                                />
+                                <Label htmlFor="auto-delete" className="text-sm">Удалять проданные</Label>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3 pt-6">
-                            <Switch
-                                id="auto-delete"
-                                checked={autoSettings.autoDeleteSold}
-                                onCheckedChange={(checked) => setAutoSettings(prev => ({ ...prev, autoDeleteSold: checked }))}
-                            />
-                            <Label htmlFor="auto-delete">Автоудаление проданных</Label>
-                        </div>
-                    </div>
 
-                    <Button onClick={saveSettings} disabled={savingSettings} className="w-full">
-                        {savingSettings ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                        Сохранить настройки
-                    </Button>
-                </CardContent>
+                        <Button onClick={saveSettings} disabled={savingSettings} size="sm" variant="outline" className="w-full">
+                            {savingSettings ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                            Сохранить настройки
+                        </Button>
+                    </CardContent>
+                )}
             </Card>
 
             {/* Statistics */}

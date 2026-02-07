@@ -50,7 +50,7 @@ ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SERVER_USER@$SE
 # 2. Upload Files
 echo -e "${GREEN}Uploading files...${NC}"
 # Exclude heavy/unnecessary files and environment configs
-rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
   --exclude 'node_modules' \
   --exclude '.git' \
   --exclude '.next' \
@@ -58,6 +58,7 @@ rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" 
   --exclude '.env.local' \
   --exclude '.env.docker' \
   --exclude 'infra/supabase/docker/volumes/***' \
+  --exclude 'seed_export' \
   ./ $SERVER_USER@$SERVER_IP:$APP_DIR
 
 if [ "$WITH_SEED" = "true" ]; then

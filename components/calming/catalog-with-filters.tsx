@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -39,11 +40,106 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Navigation,
+  FileText,
 } from "lucide-react"
 import { SharePopup } from "@/components/ui/share-popup"
 import { type LandPlot, type MapSettings, LAND_STATUS_OPTIONS } from "@/lib/types"
 import { PlotMapDialog } from "@/components/map/plot-map-dialog"
 import { CatalogInteractiveMap } from "@/components/map/catalog-interactive-map"
+
+function DirectionsButton({ lat, lon, className }: { lat?: number | null; lon?: number | null; className?: string }) {
+  const [open, setOpen] = useState(false)
+  const [userPos, setUserPos] = useState<{ lat: number; lon: number } | null>(null)
+  const [geoError, setGeoError] = useState(false)
+  if (!lat || !lon) return null
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setGeoError(false)
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserPos({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+          setOpen(true)
+        },
+        () => {
+          setUserPos(null)
+          setOpen(true)
+        },
+        { timeout: 5000 }
+      )
+    } else {
+      setOpen(true)
+    }
+  }
+
+  const isMobile = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  const fromLat = userPos?.lat
+  const fromLon = userPos?.lon
+
+  const options = isMobile
+    ? [
+        { label: "Яндекс Навигатор", url: fromLat ? `yandexnavi://build_route_on_map?lat_from=${fromLat}&lon_from=${fromLon}&lat_to=${lat}&lon_to=${lon}` : `yandexnavi://build_route_on_map?lat_to=${lat}&lon_to=${lon}` },
+        { label: "Google Maps", url: fromLat ? `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLon}&destination=${lat},${lon}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` },
+        { label: "2ГИС", url: fromLat ? `https://2gis.ru/directions/points/${fromLon},${fromLat}|${lon},${lat}` : `https://2gis.ru/directions/points/|${lon},${lat}` },
+      ]
+    : [
+        { label: "Яндекс Карты", url: fromLat ? `https://yandex.ru/maps/?rtext=${fromLat},${fromLon}~${lat},${lon}&rtt=auto` : `https://yandex.ru/maps/?rtext=~${lat},${lon}&rtt=auto` },
+        { label: "Google Maps", url: fromLat ? `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLon}&destination=${lat},${lon}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` },
+        { label: "2ГИС", url: fromLat ? `https://2gis.ru/directions/points/${fromLon},${fromLat}|${lon},${lat}` : `https://2gis.ru/directions/points/|${lon},${lat}` },
+      ]
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        className={`inline-flex items-center gap-1.5 text-sm text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full hover:bg-secondary transition-colors ml-auto ${className || ""}`}
+      >
+        <Navigation className="h-3.5 w-3.5" />
+        Как проехать
+      </button>
+      {open && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false) }}
+        >
+          <div
+            className="bg-card rounded-2xl shadow-xl p-6 max-w-xs w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-4">Как проехать?</h3>
+            <div className="flex flex-col gap-2">
+              {options.map((opt) => (
+                <a
+                  key={opt.label}
+                  href={opt.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors text-sm font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Navigation className="h-4 w-4 text-primary" />
+                  {opt.label}
+                </a>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false) }}
+              className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  )
+}
 
 function renderRichText(input: string) {
   const withBold = input
@@ -178,7 +274,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   const [currentPage, setCurrentPage] = useState(initialFilters?.page || 1)
-  const [itemsPerPage, setItemsPerPage] = useState(3)
+  const [itemsPerPage, setItemsPerPage] = useState(12)
 
   // Filter states
   const [district, setDistrict] = useState("")
@@ -831,21 +927,6 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
 
             )}
 
-            {/* New Filter Checkbox inside Advanced or separately? Let's keep it conditional or hidden if not active? 
-                Actually user didn't ask for a checkbox in UI, just a link. 
-                But for consistency, let's add a "Only new" checkbox in advanced filters 
-            */}
-            {showAdvanced && (
-              <div className="mt-4 flex items-center space-x-2">
-                <Checkbox id="isNew" checked={isNew} onCheckedChange={(c) => setIsNew(!!c)} />
-                <label
-                  htmlFor="isNew"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Только новинки (за 30 дней)
-                </label>
-              </div>
-            )}
           </div>
         </div>
       </section>
@@ -936,11 +1017,6 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                               Топ
                             </Badge>
                           )}
-                          <Badge
-                            className="bg-white/95 text-slate-700 rounded-lg px-2.5 py-1 text-xs font-semibold border-none shadow-sm hover:bg-white transition-colors"
-                          >
-                            {plot.land_status}
-                          </Badge>
                         </div>
 
                         {/* Share Button */}
@@ -1007,6 +1083,12 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
 
                         {/* Features */}
                         <div className="flex flex-wrap gap-2 mb-5">
+                          {plot.land_status && (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full">
+                              <FileText className="h-3.5 w-3.5" />
+                              {plot.land_status}
+                            </div>
+                          )}
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full">
                             <Ruler className="h-3.5 w-3.5" />
                             {plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea ?? plot.area_sotok : plot.area_sotok} соток
@@ -1035,6 +1117,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                               Рассрочка
                             </div>
                           )}
+                          <DirectionsButton lat={plot.center_lat} lon={plot.center_lon} />
                         </div>
 
                         {/* Price & Button */}
@@ -1175,6 +1258,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                                   Рассрочка
                                 </Badge>
                               )}
+                              <DirectionsButton lat={plot.center_lat} lon={plot.center_lon} />
                             </div>
                           </div>
 
