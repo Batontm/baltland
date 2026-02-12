@@ -1,10 +1,8 @@
 import type React from "react"
 import type { Metadata } from "next"
 
-import { FloatingChat } from "@/components/chat/floating-chat"
 import { Toaster } from "@/components/ui/toaster"
-import { YandexMetrika } from "@/components/analytics/yandex-metrika"
-import { CookieConsent } from "@/components/ui/cookie-consent"
+import { LazyWidgets } from "@/components/lazy-widgets"
 import { createClient } from "@/lib/supabase/server"
 import "./globals.css"
 
@@ -60,7 +58,7 @@ export async function generateMetadata(): Promise<Metadata> {
         },
       ],
       shortcut: "/favicon.ico",
-      apple: "/apple-icon.png",
+      apple: "/favicon.ico",
     },
   }
 }
@@ -123,13 +121,7 @@ export default async function RootLayout({
     priceRange: "₽₽",
     currenciesAccepted: "RUB",
     paymentAccepted: "Наличные, Банковский перевод, Рассрочка",
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      reviewCount: "156",
-      bestRating: "5",
-      worstRating: "1",
-    },
+    
     address: {
       "@type": "PostalAddress",
       streetAddress: address || "ул. Брамса, 40",
@@ -181,25 +173,29 @@ export default async function RootLayout({
       maxValue: 15
     },
     slogan: "Ваш уголок у Балтийского моря",
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${baseUrl}/catalog?search={search_term_string}`
-      },
-      "query-input": "required name=search_term_string"
-    }
+  }
+
+  const webSiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${baseUrl}/#website`,
+    name: "БалтикЗемля",
+    alternateName: ["BaltLand", "Балтланд", "baltland.ru"],
+    url: baseUrl,
+    publisher: {
+      "@id": `${baseUrl}/#organization`,
+    },
+    inLanguage: "ru-RU",
   }
 
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }} />
         {children}
         <Toaster />
-        <FloatingChat />
-        <YandexMetrika />
-        <CookieConsent />
+        <LazyWidgets />
       </body>
     </html>
   )

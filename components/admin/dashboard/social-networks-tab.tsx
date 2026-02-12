@@ -246,14 +246,6 @@ export function SocialNetworksTab() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-semibold">Публикации ВКонтакте</h2>
-                <Button variant="outline" size="sm" onClick={loadData}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Обновить
-                </Button>
-            </div>
-
             {/* Auto-publish Settings */}
             <Card>
                 <CardHeader className="pb-3">

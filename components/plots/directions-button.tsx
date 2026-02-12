@@ -50,7 +50,7 @@ export function DirectionsButton({ lat, lon, className }: { lat?: number | null;
       <button
         type="button"
         onClick={handleClick}
-        className={`inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full text-sm font-medium transition-colors ${className || ""}`}
+        className={`inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-sm font-medium transition-colors ${className || ""}`}
       >
         <Navigation className="h-4 w-4" />
         Как проехать

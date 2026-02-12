@@ -245,6 +245,7 @@ export function FloatingChat() {
                             size="icon"
                             className="text-white hover:bg-white/20 rounded-full"
                             onClick={() => setIsOpen(false)}
+                            aria-label="Закрыть чат"
                         >
                             <X className="h-5 w-5" />
                         </Button>
@@ -380,6 +381,7 @@ export function FloatingChat() {
                                     className="h-9 w-9 text-slate-400 hover:text-slate-600"
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={isUploading}
+                                    aria-label="Прикрепить файл"
                                 >
                                     {isUploading ? (
                                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -396,6 +398,7 @@ export function FloatingChat() {
                                         showEmojiPicker && "bg-slate-100 text-slate-600"
                                     )}
                                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                    aria-label="Эмодзи"
                                 >
                                     <Smile className="h-5 w-5" />
                                 </Button>
@@ -414,6 +417,7 @@ export function FloatingChat() {
                             <textarea
                                 ref={inputRef}
                                 placeholder={settings?.chat_prompt_placeholder || "Введите сообщение"}
+                                aria-label="Сообщение"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={(e) => {
@@ -434,6 +438,7 @@ export function FloatingChat() {
                                 className="bg-emerald-600 hover:bg-emerald-700 shrink-0 h-10 w-10 rounded-full"
                                 onClick={() => handleSend()}
                                 disabled={!inputValue.trim() || isSending}
+                                aria-label="Отправить"
                             >
                                 {isSending ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -452,6 +457,7 @@ export function FloatingChat() {
                     size="icon"
                     className="h-16 w-16 rounded-full bg-emerald-600 hover:bg-emerald-700 shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
                     onClick={() => setIsOpen(true)}
+                    aria-label="Открыть чат"
                 >
                     <MessageCircle className="h-8 w-8 text-white group-hover:rotate-12 transition-transform" />
                 </Button>

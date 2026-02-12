@@ -1,5 +1,5 @@
 
-import { notFound, redirect } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import type { Metadata } from "next"
 import { getLandPlotBundleById, getOrganizationSettings, getSimilarPlots } from "@/app/actions"
 import type { LandPlot } from "@/lib/types"
@@ -113,8 +113,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     })
 
     return {
-        title: `${title} | БалтикЗемля`,
+        title,
         description,
+        robots: { index: false, follow: false },
         alternates: { canonical: `https://baltland.ru${seoPath}` },
         openGraph: {
             title,
@@ -153,7 +154,7 @@ export default async function PlotSitemapPage({ params }: { params: Promise<{ sl
     })
 
     if (slug !== expectedSlug) {
-        redirect(`/uchastok/${expectedSlug}`)
+        permanentRedirect(`/uchastok/${expectedSlug}`)
     }
 
     const seoPath = buildPlotSeoPath({
@@ -162,5 +163,5 @@ export default async function PlotSitemapPage({ params }: { params: Promise<{ sl
         intId: plot.int_id || plot.id,
     })
 
-    redirect(seoPath)
+    permanentRedirect(seoPath)
 }

@@ -3,7 +3,7 @@ import { Footer } from "@/components/calming/footer"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-    title: "Договор публичной оферты | БалтикЗемля",
+    title: "Договор публичной оферты",
     description: "Условия договора публичной оферты на покупку земельных участков через сайт БалтикЗемля. Права и обязанности сторон.",
     alternates: {
         canonical: "https://baltland.ru/terms",

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { MapContainer, TileLayer, Polygon, Marker, useMap } from "react-leaflet"
 import L from "leaflet"
-import { MapPin, Phone, MessageCircle, ChevronUp, ChevronDown, Maximize2, Minus, Plus, Mountain, Map as MapIcon, Ruler } from "lucide-react"
+import { MapPin, Phone, MessageCircle, ChevronUp, ChevronDown, Maximize2, Minimize2, Minus, Plus, Mountain, Map as MapIcon, Ruler } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -164,8 +164,13 @@ function SmoothWheelZoom() {
 }
 
 // Map controls component
-function MapControls({ mapType, onToggleType }: { mapType: "satellite" | "scheme"; onToggleType: () => void }) {
+function MapControls({ mapType, onToggleType, isFullscreen, onToggleFullscreen }: { mapType: "satellite" | "scheme"; onToggleType: () => void; isFullscreen: boolean; onToggleFullscreen: () => void }) {
     const map = useMap()
+
+    useEffect(() => {
+        // Invalidate map size after fullscreen toggle so tiles render correctly
+        setTimeout(() => map.invalidateSize(), 50)
+    }, [isFullscreen, map])
 
     return (
         <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
@@ -173,16 +178,10 @@ function MapControls({ mapType, onToggleType }: { mapType: "satellite" | "scheme
                 variant="secondary"
                 size="icon"
                 className="h-10 w-10 rounded-lg bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-                onClick={() => {
-                    const container = map.getContainer()
-                    if (document.fullscreenElement) {
-                        document.exitFullscreen()
-                    } else {
-                        container.requestFullscreen()
-                    }
-                }}
+                onClick={onToggleFullscreen}
+                aria-label={isFullscreen ? "Свернуть карту" : "Раскрыть карту"}
             >
-                <Maximize2 className="h-4 w-4" />
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
 
             <Button
@@ -235,10 +234,20 @@ export function PlotHeroMap({ plot, bundlePlots, totalArea, price, phone, onView
     const [cardExpanded, setCardExpanded] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [mapType, setMapType] = useState<"satellite" | "scheme">("scheme")
+    const [isFullscreen, setIsFullscreen] = useState(false)
 
     useEffect(() => {
         setMounted(true)
     }, [])
+
+    useEffect(() => {
+        if (isFullscreen) {
+            document.body.style.overflow = "hidden"
+        } else {
+            document.body.style.overflow = ""
+        }
+        return () => { document.body.style.overflow = "" }
+    }, [isFullscreen])
 
     const toggleMapType = () => {
         setMapType(prev => prev === "satellite" ? "scheme" : "satellite")
@@ -313,7 +322,7 @@ export function PlotHeroMap({ plot, bundlePlots, totalArea, price, phone, onView
     // Show image fallback if no coordinates
     if (!canShowMap) {
         return (
-            <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden rounded-2xl">
+            <div className="relative w-full h-[50vh] md:h-[55vh] overflow-hidden rounded-2xl">
                 {plot.image_url ? (
                     <>
                         <Image src={plot.image_url} alt={plot.title} fill className="object-cover" />
@@ -338,7 +347,7 @@ export function PlotHeroMap({ plot, bundlePlots, totalArea, price, phone, onView
     }
 
     return (
-        <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden rounded-2xl">
+        <div className={isFullscreen ? "fixed inset-0 z-[9999] bg-white" : "relative w-full h-[50vh] md:h-[55vh] overflow-hidden rounded-2xl"}>
             <MapContainer
                 center={center}
                 zoom={16}
@@ -382,7 +391,7 @@ export function PlotHeroMap({ plot, bundlePlots, totalArea, price, phone, onView
                 )}
 
                 <SmoothWheelZoom />
-                <MapControls mapType={mapType} onToggleType={toggleMapType} />
+                <MapControls mapType={mapType} onToggleType={toggleMapType} isFullscreen={isFullscreen} onToggleFullscreen={() => setIsFullscreen(f => !f)} />
             </MapContainer>
         </div>
     )

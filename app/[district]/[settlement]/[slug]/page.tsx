@@ -19,6 +19,9 @@ import { MapPin, Ruler } from "lucide-react"
 import { CallbackButtons } from "@/components/plots/callback-buttons"
 import { DirectionsButton } from "@/components/plots/directions-button"
 import { PlotJsonLd } from "@/components/seo/plot-jsonld"
+import { SharePopup } from "@/components/ui/share-popup"
+
+export const revalidate = 3600 // ISR: revalidate every hour
 
 function truncate(input: string, maxLen: number) {
     if (input.length <= maxLen) return input
@@ -245,8 +248,19 @@ export default async function PlotSeoPage({
             </section>
 
             <section className="relative -mt-16 z-10 container mx-auto px-4">
-                <div className="max-w-4xl mx-auto bg-white shadow-lg p-6 rounded-3xl">
-                    <h1 className="text-2xl md:text-3xl font-semibold mb-1">{plotLabel}</h1>
+                <div className="relative max-w-4xl mx-auto bg-white shadow-lg p-6 rounded-3xl">
+                    {/* Мобильная кнопка Поделиться */}
+                    <div className="absolute top-4 right-4 md:hidden">
+                        <SharePopup
+                            url={plotUrl}
+                            title={plotLabel}
+                            cadastralNumber={allCadastralNumbers[0] || undefined}
+                            price={price}
+                            area={totalArea}
+                            location={[plot.location, plot.district].filter(Boolean).join(", ")}
+                        />
+                    </div>
+                    <h1 className="text-2xl md:text-3xl font-semibold mb-1 pr-12 md:pr-0">{plotLabel}</h1>
                     {isBundle && allCadastralNumbers.length > 1 && (
                         <p className="text-base font-bold text-foreground mb-2">
                             КН: {allCadastralNumbers.join(', ')}
@@ -285,6 +299,18 @@ export default async function PlotSeoPage({
                             areaSotok={totalArea}
                         />
                         <DirectionsButton lat={plot.center_lat} lon={plot.center_lon} />
+                        {/* Десктоп кнопка Поделиться */}
+                        <div className="hidden md:block">
+                            <SharePopup
+                                url={plotUrl}
+                                title={plotLabel}
+                                cadastralNumber={allCadastralNumbers[0] || undefined}
+                                price={price}
+                                area={totalArea}
+                                location={[plot.location, plot.district].filter(Boolean).join(", ")}
+                                variant="button"
+                            />
+                        </div>
                     </div>
                 </div>
             </section>

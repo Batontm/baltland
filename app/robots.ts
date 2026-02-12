@@ -24,6 +24,8 @@ export default function robots(): MetadataRoute.Robots {
           "/staff/",
           "/minimalist/",
           "/luxury/",
+          "/plots/",
+          "/uchastok/",
           "/*?utm_*",
           "/*?yclid=*",
           "/*?gclid=*",

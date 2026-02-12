@@ -4,10 +4,23 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2, ShieldCheck, MapPin, Users } from "lucide-react"
+import { Header } from "@/components/calming/header"
+import { Footer } from "@/components/calming/footer"
+import { SiteBreadcrumb } from "@/components/site-breadcrumb"
 
 export const metadata: Metadata = {
-    title: "О компании | БалтикЗемля",
+    title: "О компании",
     description: "Ваш эксперт по земельным активам в Калининградской области. Продажа, подбор и юридическое сопровождение сделок с недвижимостью.",
+    alternates: {
+        canonical: "https://baltland.ru/about",
+    },
+    openGraph: {
+        title: "О компании",
+        description: "Ваш эксперт по земельным активам в Калининградской области.",
+        url: "https://baltland.ru/about",
+        type: "website",
+        images: [{ url: "https://baltland.ru/og-image.png", width: 1200, height: 630 }],
+    },
 }
 
 export default async function AboutPage() {
@@ -48,6 +61,14 @@ export default async function AboutPage() {
 
     return (
         <div className="min-h-screen bg-background">
+            <Header />
+
+            <div className="sticky top-[4.5rem] z-40 bg-background/80 backdrop-blur-xl border-b border-border/50">
+                <div className="container mx-auto px-4 py-3">
+                    <SiteBreadcrumb items={[{ label: "О компании", href: "/about" }]} />
+                </div>
+            </div>
+
             {/* Hero Section */}
             <section className="relative py-20 lg:py-32 overflow-hidden bg-primary/5">
                 <div className="container px-4 md:px-6 relative z-10">
@@ -164,11 +185,13 @@ export default async function AboutPage() {
                             <Link href="/catalog">Посмотреть каталог участков</Link>
                         </Button>
                         <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent border-primary-foreground/20 hover:bg-primary-foreground/10 text-primary-foreground hover:text-white" asChild>
-                            <Link href="/#contact">Заказать обратный звонок</Link>
+                            <Link href="/contacts">Заказать обратный звонок</Link>
                         </Button>
                     </div>
                 </div>
             </section>
+
+            <Footer />
         </div>
     )
 }

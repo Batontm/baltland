@@ -5,19 +5,21 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Zap, FileText, CreditCard, MapPin, HelpCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { FaqContactForm } from "@/components/calming/faq-contact-form"
+import { Header } from "@/components/calming/header"
+import { Footer } from "@/components/calming/footer"
 import type { Metadata } from "next"
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
 import { FAQJsonLd } from "@/components/seo/faq-jsonld"
 
 export const metadata: Metadata = {
-    title: "Помощь покупателю | Частые вопросы | БалтикЗемля",
+    title: "Помощь покупателю | Частые вопросы",
     description: "Ответы на частые вопросы о покупке земельных участков в Калининградской области. Документы, оформление, оплата, выбор локации.",
     alternates: {
         canonical: "https://baltland.ru/faq",
     },
 }
 
-export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 export default async function FaqPage() {
     const allFaqItems = await getFaqItems(true) // Fetch only active items
@@ -38,7 +40,9 @@ export default async function FaqPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#FDFCFB] py-12 px-4 scroll-smooth">
+        <main className="min-h-screen bg-background">
+            <Header />
+        <div className="bg-[#FDFCFB] py-12 px-4 scroll-smooth">
             <div className="container mx-auto max-w-4xl mb-6">
                 <SiteBreadcrumb
                     items={[{ label: "Помощь", href: "/faq" }]}
@@ -123,5 +127,7 @@ export default async function FaqPage() {
                 )}
             </div>
         </div>
+            <Footer />
+        </main>
     )
 }

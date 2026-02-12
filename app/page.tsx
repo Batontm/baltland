@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 60
 
 import { Header } from "@/components/calming/header"
 import { HeroSection } from "@/components/calming/hero-section"

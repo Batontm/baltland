@@ -1,15 +1,19 @@
 import Link from "next/link"
+import type { Metadata } from "next"
 import { ShieldCheck, ArrowLeft, FileText, Download, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { getLegalContent } from "@/app/actions"
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 300
 
-export const metadata = {
-    title: "Юридическая чистота | RKK Land",
-    description: "Информация о юридической проверке земельных участков, необходимые документы и гарантии безопасности сделки.",
+export const metadata: Metadata = {
+    title: "Юридическая чистота",
+    description: "Юридическая проверка земельных участков в Калининградской области. Документы, обременения, гарантии безопасности сделки от БалтикЗемля.",
+    alternates: {
+        canonical: "https://baltland.ru/legal",
+    },
 }
 
 export default async function LegalPage() {
@@ -99,7 +103,7 @@ export default async function LegalPage() {
                             Наши юристы бесплатно проконсультируют вас по всем нюансам заключения договора и оформления собственности.
                         </p>
                         <Button asChild size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50 border-none px-8 h-14 text-lg font-bold rounded-2xl">
-                            <Link href="/#contact">Связаться с юристом</Link>
+                            <Link href="/contacts">Связаться с юристом</Link>
                         </Button>
                     </div>
                     <ShieldCheck className="absolute -bottom-10 -right-10 h-64 w-64 text-emerald-500 opacity-20 rotate-12" />

@@ -10,6 +10,9 @@ import { SiteBreadcrumb } from "@/components/site-breadcrumb"
 import { buildLocationSlug, buildPlotSeoPath, buildPlotSlug, buildDistrictSeoSegment, buildSettlementSeoSegment } from "@/lib/utils"
 import { Metadata } from "next"
 import { ItemListJsonLd } from "@/components/seo/item-list-jsonld"
+import { getSettlementDescription } from "@/app/actions"
+
+export const revalidate = 60
 
 function pluralPlots(n: number): string {
     const mod10 = n % 10
@@ -38,7 +41,7 @@ async function resolveHierarchy(slugs: string[]): Promise<SeoCatalogPageConfig |
     // 1. Root catalog
     if (slugs.length === 0) {
         return {
-            title: "Каталог земельных участков | БалтикЗемля",
+            title: "Каталог земельных участков в Калининградской области",
             description: "Каталог земельных участков в Калининградской области. Подбор по назначению, цене и коммуникациям.",
             h1: "Каталог участков",
             filter: {}
@@ -66,7 +69,7 @@ async function resolveHierarchy(slugs: string[]): Promise<SeoCatalogPageConfig |
             if (match) {
                 const count = plots.filter(p => p.district === match).length
                 return {
-                    title: `Участки в ${match} | БалтикЗемля`,
+                    title: `Участки в ${match}`,
                     description: `Продажа земельных участков в ${match}. ${count} ${pluralPlots(count)} в продаже.`,
                     h1: `Участки в ${match}`,
                     filter: { district: match }
@@ -94,7 +97,7 @@ async function resolveHierarchy(slugs: string[]): Promise<SeoCatalogPageConfig |
             if (match) {
                 const count = plots.filter(p => p.location === match.location && p.district === match.district).length
                 return {
-                    title: `Участки в ${match.location}, ${match.district} | БалтикЗемля`,
+                    title: `Участки в ${match.location}, ${match.district}`,
                     description: `Продажа земельных участков в ${match.location} (${match.district}). ${count} ${pluralPlots(count)} в продаже.`,
                     h1: `Участки в ${match.location}`,
                     filter: { district: match.district!, settlement: match.location! }
@@ -125,6 +128,7 @@ export async function generateMetadata({ params }: CatalogPageProps): Promise<Me
             description: config.description,
             url: canonical,
             type: "website",
+            images: [{ url: `${baseUrl}/og-image.png`, width: 1200, height: 630, alt: config.title }],
         },
     }
 }
@@ -172,6 +176,13 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
         .maybeSingle()
 
     const mapSettings = ((org as any)?.map_settings ?? null) as MapSettings | null
+
+    // Fetch SEO description for district/settlement pages or use static seoText from config
+    let seoText: string | null = config.seoText || null
+    if (!seoText && config.filter?.district && config.filter?.settlement) {
+        const desc = await getSettlementDescription(config.filter.district, config.filter.settlement)
+        seoText = desc?.description || null
+    }
 
     // Breadcrumbs logic
     const breadcrumbItems = [{ label: "Каталог", href: "/catalog" }]
@@ -233,6 +244,15 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
                     mapSettings={mapSettings}
                 />
             </div>
+
+            {seoText && (
+                <section className="container mx-auto px-4 py-12">
+                    <div className="max-w-4xl mx-auto prose prose-zinc prose-sm">
+                        <div dangerouslySetInnerHTML={{ __html: seoText }} />
+                    </div>
+                </section>
+            )}
+
             <Footer />
         </main>
     )

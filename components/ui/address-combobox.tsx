@@ -28,6 +28,7 @@ interface AddressComboboxProps {
   disabled?: boolean
   loading?: boolean
   className?: string
+  "aria-label"?: string
 }
 
 export function AddressCombobox({
@@ -40,6 +41,7 @@ export function AddressCombobox({
   disabled = false,
   loading = false,
   className,
+  "aria-label": ariaLabel,
 }: AddressComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -64,6 +66,7 @@ export function AddressCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-label={ariaLabel || placeholder}
           disabled={disabled || loading}
           className={cn(
             "w-full justify-between rounded-xl",

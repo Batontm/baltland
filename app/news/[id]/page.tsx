@@ -11,6 +11,8 @@ import type { Metadata } from 'next'
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
 import { NewsArticleJsonLd } from "@/components/seo/article-jsonld"
 
+export const revalidate = 3600 // ISR: revalidate every hour
+
 interface PageProps {
   params: Promise<{ id: string }>
 }
@@ -27,14 +29,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!newsItem) return { title: "Новость не найдена" }
 
-  const description = newsItem.content.substring(0, 160).replace(/\n/g, ' ')
+  const description = newsItem.content
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 160)
+
+  const canonical = `https://baltland.ru/news/${id}`
 
   return {
-    title: `${newsItem.title} | Baltland`,
-    description: description,
+    title: newsItem.title,
+    description,
+    alternates: { canonical },
     openGraph: {
       title: newsItem.title,
-      description: description,
+      description,
+      url: canonical,
       type: 'article',
     },
   }
@@ -63,7 +73,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
         <div className="container mx-auto px-4 max-w-4xl py-3">
           <SiteBreadcrumb
             items={[
-              { label: "Новости", href: "/#news" },
+              { label: "Новости", href: "/news" },
               { label: newsItem.title, href: `/news/${id}` },
             ]}
           />
@@ -91,7 +101,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
         <article className="container mx-auto px-4 max-w-4xl">
           {/* Back button */}
           <Link
-            href="/#news"
+            href="/news"
             className="group inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border group-hover:border-primary/30 group-hover:bg-primary/5 transition-all">
@@ -161,7 +171,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
 
           {/* Footer Navigation */}
           <div className="mt-20 pt-10 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <Link href="/#news">
+            <Link href="/news">
               <Button variant="outline" size="lg" className="rounded-2xl h-14 px-8 border-border/50 hover:bg-secondary/50 transition-all font-medium">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Все новости

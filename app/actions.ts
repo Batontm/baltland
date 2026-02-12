@@ -507,6 +507,13 @@ export async function createPlot(data: Partial<LandPlot>): Promise<LandPlot | nu
     }
   }
 
+  // Notify IndexNow for active plots
+  if (plot.is_active) {
+    import("@/lib/indexnow").then(({ submitToIndexNow }) => {
+      submitToIndexNow([`/plots/${plot.int_id || plot.id}/plot`]).catch(() => {})
+    })
+  }
+
   revalidatePath("/")
   revalidatePath("/admin")
 
@@ -630,6 +637,13 @@ export async function updatePlot(id: string, data: Partial<LandPlot>): Promise<L
   if (selectError || !plot) {
     console.error("Error fetching updated plot:", selectError)
     throw new Error(selectError?.message || "Plot not found after update")
+  }
+
+  // Notify IndexNow for active plots
+  if (plot.is_active) {
+    import("@/lib/indexnow").then(({ submitToIndexNow }) => {
+      submitToIndexNow([`/plots/${plot.int_id || plot.id}/plot`]).catch(() => {})
+    })
   }
 
   revalidatePath("/")
@@ -1435,6 +1449,13 @@ export async function updateNews(
   if (error) {
     console.error("Error updating news:", error)
     throw new Error(error.message)
+  }
+
+  // Notify IndexNow when news is published
+  if (data.is_published && news) {
+    import("@/lib/indexnow").then(({ submitToIndexNow }) => {
+      submitToIndexNow([`/news/${news.id}`]).catch(() => {})
+    })
   }
 
   revalidatePath("/")
@@ -3097,6 +3118,22 @@ export async function applySettlementDescriptionToPlots(
     }
 
     const updatedCount = updated?.length || 0
+
+    // Notify IndexNow about updated plots (batch, max 100)
+    if (updatedCount > 0 && matchedIds.length > 0) {
+      const { data: updatedPlots } = await supabase
+        .from("land_plots")
+        .select("int_id, id, is_active")
+        .in("id", matchedIds.slice(0, 100))
+        .eq("is_active", true)
+
+      if (updatedPlots && updatedPlots.length > 0) {
+        import("@/lib/indexnow").then(({ submitToIndexNow }) => {
+          const urls = updatedPlots.map(p => `/plots/${p.int_id || p.id}/plot`)
+          submitToIndexNow(urls).catch(() => {})
+        })
+      }
+    }
 
     revalidatePath("/")
     revalidatePath("/admin")

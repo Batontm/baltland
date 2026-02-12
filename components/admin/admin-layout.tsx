@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { AdminSidebar, type AdminSection } from "./admin-sidebar"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -67,6 +67,8 @@ export function AdminLayout({
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="left" className="p-0 w-64 bg-slate-900 border-slate-700">
+                        <SheetTitle className="sr-only">Меню администратора</SheetTitle>
+                        <SheetDescription className="sr-only">Навигация по админ-панели</SheetDescription>
                         <AdminSidebar
                             activeSection={activeSection}
                             onSectionChange={handleSectionChange}

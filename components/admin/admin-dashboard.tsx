@@ -128,7 +128,7 @@ import { HomeNewBlockCard } from "@/components/admin/dashboard/settings/home-new
 import { TelegramSettingsCard } from "@/components/admin/dashboard/settings/telegram-settings-card"
 import { TelegramTemplatesCard } from "@/components/admin/dashboard/settings/telegram-templates-card"
 import { ChatSettingsCard } from "@/components/admin/dashboard/settings/chat-settings-card"
-import { SocialNetworksTab } from "@/components/admin/dashboard/social-networks-tab"
+import { PublicationsTab } from "@/components/admin/dashboard/publications-tab"
 import type { PlotPlaceholder } from "@/lib/types"
 
 interface AdminDashboardProps {
@@ -1609,7 +1609,7 @@ export function AdminDashboard({
         return <TelegramTemplatesCard />
 
       case "social-networks":
-        return <SocialNetworksTab />
+        return <PublicationsTab />
 
       default:
         return (

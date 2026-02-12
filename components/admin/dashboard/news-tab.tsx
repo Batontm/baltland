@@ -79,6 +79,106 @@ export function NewsTab({
     }
   }
 
+  const renderForm = (title: string) => (
+    <Card className="rounded-2xl border-primary/30 shadow-md">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          <Button variant="ghost" size="icon" onClick={onCancel}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Заголовок</Label>
+            <Input
+              value={newsFormData.title || ""}
+              onChange={(e) => onChangeForm({ title: e.target.value })}
+              placeholder="Название новости"
+              className="rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Автор</Label>
+            <Input
+              value={newsFormData.author || ""}
+              onChange={(e) => onChangeForm({ author: e.target.value })}
+              placeholder="Имя автора"
+              className="rounded-xl"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>URL изображения</Label>
+          <div className="flex gap-2">
+            <Input
+              value={newsFormData.image_url || ""}
+              onChange={(e) => onChangeForm({ image_url: e.target.value })}
+              placeholder="https://..."
+              className="rounded-xl"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={uploadingImage || loading}
+              onClick={() => {
+                const el = document.getElementById("news-image-upload") as HTMLInputElement | null
+                el?.click()
+              }}
+              className="rounded-xl bg-transparent"
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
+            <input
+              id="news-image-upload"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                e.target.value = ""
+                if (!f) return
+                void handleUploadImage(f)
+              }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">Рекомендуемый размер: 1200×675 px (формат 16:9). Картинка заполнит всю плашку. Допустимые форматы: JPG, PNG, WebP.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Содержание</Label>
+          <Textarea
+            value={newsFormData.content || ""}
+            onChange={(e) => onChangeForm({ content: e.target.value })}
+            placeholder="Полный текст новости..."
+            className="rounded-xl min-h-[200px]"
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-green-100 rounded-xl">
+          <span className="text-sm font-medium">Опубликовать</span>
+          <Switch
+            checked={newsFormData.is_published || false}
+            onCheckedChange={(checked) => onChangeForm({ is_published: checked })}
+          />
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <Button onClick={onSave} disabled={loading} className="flex-1 rounded-xl">
+            {loading ? "Сохранение..." : "Сохранить"}
+          </Button>
+          <Button variant="outline" onClick={onCancel} className="rounded-xl bg-transparent">
+            Отмена
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -92,118 +192,23 @@ export function NewsTab({
       {/* Parser Widget */}
       <NewsParserWidget onNewsDraftsAdded={onRefresh} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* News Form Panel */}
-        {(isCreatingNews || editingNews) && (
-          <Card className="lg:col-span-1 rounded-2xl h-fit sticky top-24">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{isCreatingNews ? "Новая новость" : "Редактирование"}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={onCancel}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="space-y-2">
-                <Label>Заголовок</Label>
-                <Input
-                  value={newsFormData.title || ""}
-                  onChange={(e) => onChangeForm({ title: e.target.value })}
-                  placeholder="Название новости"
-                  className="rounded-xl"
-                />
-              </div>
+      {/* New news form — at the top */}
+      {isCreatingNews && renderForm("Новая новость")}
 
-              <div className="space-y-2">
-                <Label>Автор</Label>
-                <Input
-                  value={newsFormData.author || ""}
-                  onChange={(e) => onChangeForm({ author: e.target.value })}
-                  placeholder="Имя автора"
-                  className="rounded-xl"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>URL изображения</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={newsFormData.image_url || ""}
-                    onChange={(e) => onChangeForm({ image_url: e.target.value })}
-                    placeholder="https://..."
-                    className="rounded-xl"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={uploadingImage || loading}
-                    onClick={() => {
-                      const el = document.getElementById("news-image-upload") as HTMLInputElement | null
-                      el?.click()
-                    }}
-                    className="rounded-xl bg-transparent"
-                  >
-                    <Upload className="h-4 w-4" />
-                  </Button>
-                  <input
-                    id="news-image-upload"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0]
-                      e.target.value = ""
-                      if (!f) return
-                      void handleUploadImage(f)
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Содержание</Label>
-                <Textarea
-                  value={newsFormData.content || ""}
-                  onChange={(e) => onChangeForm({ content: e.target.value })}
-                  placeholder="Полный текст новости..."
-                  className="rounded-xl min-h-[120px]"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-green-100 rounded-xl">
-                <span className="text-sm font-medium">Опубликовать</span>
-                <Switch
-                  checked={newsFormData.is_published || false}
-                  onCheckedChange={(checked) => onChangeForm({ is_published: checked })}
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button onClick={onSave} disabled={loading} className="flex-1 rounded-xl">
-                  {loading ? "Сохранение..." : "Сохранить"}
-                </Button>
-                <Button variant="outline" onClick={onCancel} className="rounded-xl bg-transparent">
-                  Отмена
-                </Button>
-              </div>
+      {/* News List */}
+      <div className="space-y-4">
+        {news.length === 0 ? (
+          <Card className="rounded-2xl">
+            <CardContent className="py-12 text-center">
+              <Newspaper className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Новостей пока нет. Добавьте первую!</p>
             </CardContent>
           </Card>
-        )}
-
-        {/* News List */}
-        <div className={`space-y-4 ${isCreatingNews || editingNews ? "lg:col-span-2" : "lg:col-span-3"}`}>
-          {news.length === 0 ? (
-            <Card className="rounded-2xl">
-              <CardContent className="py-12 text-center">
-                <Newspaper className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Новостей пока нет. Добавьте первую!</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {news.map((newsItem) => (
-                <Card key={newsItem.id} className="rounded-2xl overflow-hidden">
+        ) : (
+          <div className="grid gap-4">
+            {news.map((newsItem) => (
+              <div key={newsItem.id} className="space-y-4">
+                <Card className="rounded-2xl overflow-hidden">
                   <div className="flex flex-col md:flex-row">
                     <div className="w-full md:w-48 h-32 bg-secondary flex-shrink-0">
                       {newsItem.image_url ? (
@@ -241,10 +246,13 @@ export function NewsTab({
                     </CardContent>
                   </div>
                 </Card>
-              ))}
-            </div>
-          )}
-        </div>
+
+                {/* Inline editor — right below the edited news item */}
+                {editingNews?.id === newsItem.id && renderForm("Редактирование")}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

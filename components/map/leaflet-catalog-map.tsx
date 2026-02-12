@@ -31,9 +31,9 @@ const smoothCSS = `
 .leaflet-zoom-anim .leaflet-zoom-animated {
   transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-/* Polygon transitions */
+/* Polygon transitions (no 'd' transition — causes massive repaints) */
 .leaflet-overlay-pane svg path {
-  transition: stroke-width 0.4s ease, fill-opacity 0.5s ease, opacity 0.5s ease, d 0.3s ease;
+  transition: stroke-width 0.3s ease, fill-opacity 0.3s ease, opacity 0.3s ease;
 }
 /* Marker transitions */
 .leaflet-marker-pane .leaflet-marker-icon {
@@ -604,27 +604,30 @@ function AdaptiveScrollZoom() {
     return null
 }
 
-// ZoomTracker component to track current zoom level (tracks both zoom and zoomend for smoother transitions)
-function ZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+// ZoomTracker component to track current zoom level and map bounds for viewport culling
+function ZoomTracker({ onZoomChange, onBoundsChange }: { onZoomChange: (zoom: number) => void; onBoundsChange?: (bounds: L.LatLngBounds) => void }) {
     const map = useMap()
 
     useEffect(() => {
         if (!map) return
 
-        const handleZoom = () => {
+        const handleChange = () => {
             onZoomChange(map.getZoom())
+            onBoundsChange?.(map.getBounds())
         }
 
-        // Set initial zoom
-        handleZoom()
+        // Set initial values
+        handleChange()
 
-        map.on('zoomend', handleZoom)
-        map.on('zoom', handleZoom)
+        map.on('zoomend', handleChange)
+        map.on('zoom', handleChange)
+        map.on('moveend', handleChange)
         return () => {
-            map.off('zoomend', handleZoom)
-            map.off('zoom', handleZoom)
+            map.off('zoomend', handleChange)
+            map.off('zoom', handleChange)
+            map.off('moveend', handleChange)
         }
-    }, [map, onZoomChange])
+    }, [map, onZoomChange, onBoundsChange])
 
     return null
 }
@@ -663,6 +666,8 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
     const [mapType, setMapType] = useState<"satellite" | "scheme">("scheme")
     const [currentZoom, setCurrentZoom] = useState(10)
     const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+    const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null)
+    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
     // Viewing form state
     const [viewingOpen, setViewingOpen] = useState(false)
@@ -733,6 +738,10 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
 
     const handleZoomChange = useCallback((zoom: number) => {
         setCurrentZoom(zoom)
+    }, [])
+
+    const handleBoundsChange = useCallback((bounds: L.LatLngBounds) => {
+        setMapBounds(bounds)
     }, [])
 
     // Build bundle lookup
@@ -847,14 +856,21 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                     updateWhenIdle={false}
                 />
 
-                {/* Polygons - visible always, but more prominent at zoom 16+ */}
-                {parsedPlots.filter(p => p.polygons.length > 0).map(plot => {
+                {/* Polygons - only render at zoom >= 14 and only those in viewport */}
+                {currentZoom >= 14 && parsedPlots.filter(p => {
+                    if (p.polygons.length === 0) return false
+                    // Viewport culling: skip polygons outside visible bounds (with padding)
+                    if (mapBounds) {
+                        const padded = mapBounds.pad(0.3)
+                        if (!padded.contains(L.latLng(p.center[0], p.center[1]))) return false
+                    }
+                    return true
+                }).map(plot => {
                     const isSelected = selectedKey !== null && plot.selectionKey === selectedKey
-                    const isHovered = hoveredKey !== null && plot.selectionKey === hoveredKey
+                    const isHovered = !isTouchDevice && hoveredKey !== null && plot.selectionKey === hoveredKey
                     const color = getPlotColor(plot)
                     const bundlePlots = bundlePlotsById.get((plot as any).bundle_id) || [plot]
 
-                    // Polygons always visible, smoothly increase prominence near detail level
                     const isDetailLevel = currentZoom >= ZOOM_THRESHOLDS.POLYGON_MIN
                     const isHighlighted = isSelected || isHovered
                     // Smooth opacity ramp between zoom 14 and 16
@@ -869,15 +885,17 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                             key={`${plot.id}-${idx}`}
                             positions={ring}
                             pathOptions={{
-                                fillColor: color, // Keep original color (green for ownership, blue for lease)
+                                fillColor: color,
                                 fillOpacity: isSelected ? 0.7 : fillOpacity,
                                 color: isHighlighted ? (isSelected ? COLORS.selected : "#8b5cf6") : color,
                                 weight: strokeWeight,
                             }}
                             eventHandlers={{
                                 click: () => onSelectPlot?.(plot.id),
-                                mouseover: () => setHoveredKey(plot.selectionKey),
-                                mouseout: () => setHoveredKey(null),
+                                ...(isTouchDevice ? {} : {
+                                    mouseover: () => setHoveredKey(plot.selectionKey),
+                                    mouseout: () => setHoveredKey(null),
+                                }),
                             }}
                         >
                             <Popup>
@@ -903,14 +921,12 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                 {currentZoom < ZOOM_THRESHOLDS.POLYGON_MIN + 0.5 && (
                     <MarkerClusterGroup
                         chunkedLoading
-                        spiderfyOnMaxZoom={true}
-                        spiderfyDistanceMultiplier={1.5}
-                        spiderLegPolylineOptions={{ opacity: 0.3, weight: 1, color: '#94a3b8' }}
+                        spiderfyOnMaxZoom={false}
                         showCoverageOnHover={false}
                         maxClusterRadius={50}
                         disableClusteringAtZoom={ZOOM_THRESHOLDS.CLUSTER_MAX + 1}
                         animate={true}
-                        animateAddingMarkers={true}
+                        animateAddingMarkers={false}
                         zoomToBoundsOnClick={true}
                         removeOutsideVisibleBounds={true}
                         iconCreateFunction={createClusterIcon}
@@ -925,8 +941,10 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
                                     icon={createDotMarker(plot)}
                                     eventHandlers={{
                                         click: () => onSelectPlot?.(plot.id),
-                                        mouseover: () => setHoveredKey(plot.selectionKey),
-                                        mouseout: () => setHoveredKey(null),
+                                        ...(isTouchDevice ? {} : {
+                                            mouseover: () => setHoveredKey(plot.selectionKey),
+                                            mouseout: () => setHoveredKey(null),
+                                        }),
                                     }}
                                 >
                                     <Popup>
@@ -940,7 +958,7 @@ export function LeafletCatalogMap({ plots, selectedPlotId, onSelectPlot }: Leafl
 
                 <AdaptiveScrollZoom />
                 <FitBoundsToPlots plots={parsedPlots} />
-                <ZoomTracker onZoomChange={handleZoomChange} />
+                <ZoomTracker onZoomChange={handleZoomChange} onBoundsChange={handleBoundsChange} />
                 <FlyToSelected plots={parsedPlots} selectedPlotId={selectedPlotId} />
                 <MapControls mapType={mapType} onToggleType={toggleMapType} />
             </MapContainer>

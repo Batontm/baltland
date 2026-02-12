@@ -53,7 +53,7 @@ export function SimilarPlotsSlider({ plots }: SimilarPlotsSliderProps) {
                 <Button
                     variant="outline"
                     size="icon"
-                    className="absolute -left-5 top-1/2 -translate-y-1/2 z-30 h-11 w-11 rounded-full bg-white shadow-xl border-emerald-100 text-emerald-700 hover:bg-emerald-50 transition-all hidden md:flex"
+                    className="absolute left-0 md:-left-5 top-1/2 -translate-y-1/2 z-30 h-11 w-11 rounded-full bg-background/95 backdrop-blur-sm border-border/50 hover:border-primary/50 hover:bg-primary hover:text-primary-foreground shadow-lg transition-all"
                     onClick={() => scroll("left")}
                 >
                     <ChevronLeft className="h-6 w-6" />
@@ -91,7 +91,7 @@ export function SimilarPlotsSlider({ plots }: SimilarPlotsSliderProps) {
                         <div
                             key={sp.id}
                             data-slider-item
-                            className="flex-none w-[280px] md:w-[calc(33.333%-16px)] snap-start"
+                            className="flex-none w-[85vw] sm:w-[280px] md:w-[calc(33.333%-16px)] snap-center md:snap-start"
                         >
                             <Link href={spUrl}>
                                 <div className="h-full bg-white rounded-3xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 group/card flex flex-col">
@@ -142,7 +142,7 @@ export function SimilarPlotsSlider({ plots }: SimilarPlotsSliderProps) {
                 <Button
                     variant="outline"
                     size="icon"
-                    className="absolute -right-5 top-1/2 -translate-y-1/2 z-30 h-11 w-11 rounded-full bg-white shadow-xl border-emerald-100 text-emerald-700 hover:bg-emerald-50 transition-all hidden md:flex"
+                    className="absolute right-0 md:-right-5 top-1/2 -translate-y-1/2 z-30 h-11 w-11 rounded-full bg-background/95 backdrop-blur-sm border-border/50 hover:border-primary/50 hover:bg-primary hover:text-primary-foreground shadow-lg transition-all"
                     onClick={() => scroll("right")}
                 >
                     <ChevronRight className="h-6 w-6" />

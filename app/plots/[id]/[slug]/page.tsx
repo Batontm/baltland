@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import Link from "next/link"
 import type { Metadata } from "next"
 import { ArrowLeft, MapPin, Ruler, Flame, Droplets, FileText, Zap, Phone, MessageCircle } from "lucide-react"
@@ -128,7 +128,7 @@ export async function generateMetadata({
 
   if (!plot) {
     return {
-      title: "Участок не найден | БалтикЗемля",
+      title: "Участок не найден",
       robots: { index: false, follow: false },
     }
   }
@@ -161,7 +161,7 @@ export async function generateMetadata({
   const imageUrl = plot.image_url || undefined
 
   return {
-    title: `${title} | БалтикЗемля`,
+    title: title,
     description,
     alternates: { canonical },
     openGraph: {
@@ -248,5 +248,5 @@ export default async function PlotPage({ params }: PlotPageProps) {
   const seoPath = buildPlotSeoPath({ district: plot.district, location: plot.location, intId: plot.int_id || plot.id })
 
   // Always redirect to canonical SEO URL
-  redirect(seoPath)
+  permanentRedirect(seoPath)
 }

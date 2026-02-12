@@ -195,6 +195,17 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
   const [viewingTelegram, setViewingTelegram] = useState(false)
   const [viewingError, setViewingError] = useState("")
 
+  // Mobile: hide catalog until user clicks "Показать"
+  const [mobileShowCatalog, setMobileShowCatalog] = useState(false)
+  const [isMobileView, setIsMobileView] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobileView(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   const visiblePlots = useMemo(() => {
     return initialPlots.filter((p) => (!p.bundle_id || p.is_bundle_primary) && p.price > 0)
   }, [initialPlots])
@@ -428,6 +439,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
   const handleDistrictChange = (value: string) => {
     setDistrict(value)
     setSettlement("")
+    if (isMobileView) setMobileShowCatalog(false)
   }
 
   const districtOptions = useMemo(() => {
@@ -768,6 +780,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                   onValueChange={(v) => {
                     setSettlement(v)
                     setCurrentPage(1)
+                    if (isMobileView) setMobileShowCatalog(false)
                   }}
                   options={settlementOptions}
                   placeholder="Все посёлки"
@@ -924,15 +937,32 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                   </Select>
                 </div>
               </div>
+            )}
 
+            {/* Mobile "Показать" button — always at the bottom of filters */}
+            {isMobileView && (
+              <div className="mt-6 md:hidden">
+                <Button
+                  onClick={() => {
+                    setMobileShowCatalog(true)
+                    setTimeout(() => {
+                      document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' })
+                    }, 100)
+                  }}
+                  className="w-full h-14 rounded-2xl text-base font-medium shadow-lg"
+                >
+                  <Search className="h-5 w-5 mr-2" />
+                  Показать {filteredLotsCount} {filteredLotsCount === 1 ? 'участок' : filteredLotsCount >= 2 && filteredLotsCount <= 4 ? 'участка' : 'участков'}
+                </Button>
+              </div>
             )}
 
           </div>
         </div>
       </section>
 
-      {/* Catalog Section */}
-      <section id="catalog" className="py-20 bg-gradient-to-b from-background to-secondary/20">
+      {/* Catalog Section — on mobile hidden until "Показать" clicked */}
+      <section id="catalog" className={`py-20 bg-gradient-to-b from-background to-secondary/20 ${isMobileView && !mobileShowCatalog ? 'hidden' : ''}`}>
         <div className="container mx-auto px-4">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
@@ -961,6 +991,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                 size="icon"
                 className="rounded-xl"
                 onClick={() => setViewMode("grid")}
+                aria-label="Сетка"
               >
                 <Grid3X3 className="h-4 w-4" />
               </Button>
@@ -969,6 +1000,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                 size="icon"
                 className="rounded-xl"
                 onClick={() => setViewMode("list")}
+                aria-label="Список"
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -1007,6 +1039,8 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                           src={plot.image_url || ""}
                           alt={plot.title || `Земельный участок ${plot.area_sotok} сот. в ${plot.location || plot.district || "Калининградской области"}`}
                           fill
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           className="object-cover group-hover:scale-105 transition-transform duration-700"
                         />
 
@@ -1021,8 +1055,8 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
 
                         {/* Share Button */}
                         <SharePopup
-                          url={`${typeof window !== 'undefined' ? window.location.origin : ''}/plot/${buildPlotSlug(plot)}`}
-                          title={`Участок ${plot.land_status}`}
+                          url={`${typeof window !== 'undefined' ? window.location.origin : 'https://baltland.ru'}${plotUrl}`}
+                          title={plot.title || `Участок ${plot.area_sotok} сот. ${plot.land_status || 'ИЖС'}`}
                           cadastralNumber={plot.cadastral_number || undefined}
                           price={plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalPrice ?? plot.price : plot.price}
                           area={plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea : plot.area_sotok}
@@ -1157,8 +1191,10 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                         <div className="relative w-full md:w-80 aspect-video md:aspect-auto shrink-0">
                           <Image
                             src={plot.image_url || ""}
-                            alt={plot.title}
+                            alt={plot.title || `Земельный участок ${plot.area_sotok} сот. в ${plot.location || plot.district || "Калининградской области"}`}
                             fill
+                            loading="lazy"
+                            sizes="(max-width: 768px) 100vw, 320px"
                             className="object-cover"
                           />
                           {plot.is_featured && (
@@ -1225,8 +1261,8 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                                 </div>
                               </div>
                               <SharePopup
-                                url={`${typeof window !== 'undefined' ? window.location.origin : ''}/plot/${buildPlotSlug(plot)}`}
-                                title={`Участок ${plot.land_status}`}
+                                url={`${typeof window !== 'undefined' ? window.location.origin : 'https://baltland.ru'}${plotUrl}`}
+                                title={plot.title || `Участок ${plot.area_sotok} сот. ${plot.land_status || 'ИЖС'}`}
                                 cadastralNumber={plot.cadastral_number || undefined}
                                 price={plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalPrice ?? plot.price : plot.price}
                                 area={plot.bundle_id ? bundleMetaById.get(plot.bundle_id)?.totalArea : plot.area_sotok}
@@ -1299,7 +1335,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                       src={
                         selectedPlot.image_url || ""
                       }
-                      alt={selectedPlot.title}
+                      alt={selectedPlot.title || `Земельный участок ${selectedPlot.area_sotok} сот. в ${selectedPlot.location || selectedPlot.district || "Калининградской области"}`}
                       fill
                       className="object-cover object-top"
                     />

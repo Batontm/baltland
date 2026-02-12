@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { TreePine, Phone, Mail, MapPin, CheckCircle, Youtube, Instagram, MessageCircle, Send } from "lucide-react"
 import { getOrganizationSettings } from "@/app/actions"
 import type { OrganizationSettings } from "@/lib/types"
@@ -62,7 +63,7 @@ export function Footer() {
     company: [
       { label: "О компании", href: "/about" },
       { label: "Помощь покупателю", href: "/faq" },
-      { label: "Контакты", href: "/#contact" },
+      { label: "Контакты", href: "/contacts" },
     ],
     legal: [
       { label: "Политика конфиденциальности", href: "/privacy" },
@@ -150,7 +151,7 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-3 mb-5">
               {settings?.logo_url ? (
                 <div className="w-11 h-11 flex items-center justify-center">
-                  <img src={settings.logo_url} alt="logo" className="h-11 w-11 object-contain bg-transparent" />
+                  <Image src={settings.logo_url} alt="БалтикЗемля" width={44} height={44} className="h-11 w-11 object-contain bg-transparent" />
                 </div>
               ) : (
                 <div className="w-11 h-11 rounded-2xl bg-primary flex items-center justify-center">
@@ -241,6 +242,7 @@ export function Footer() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    aria-label="Email для подписки"
                     className="flex-1 px-4 py-2.5 rounded-xl bg-background/10 border-0 text-sm placeholder:text-background/40 focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                   <button

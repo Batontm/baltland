@@ -1,0 +1,105 @@
+# Baltland.ru — Project Rules for AI Assistant
+
+## Project Overview
+- **Name**: Baltland (Балтланд) — сайт продажи земельных участков в Калининградской области
+- **URL**: https://baltland.ru
+- **Repo**: https://github.com/Batontm/baltland.git (branch: main)
+- **Server**: VPS 85.198.85.239, Docker, nginx + SSL
+
+## Tech Stack
+- **Framework**: Next.js 16 (App Router, Turbopack)
+- **React**: 19.2
+- **TypeScript**: 5
+- **Styling**: Tailwind CSS 4 + shadcn/ui (New York style, Zinc scheme)
+- **Database**: Supabase (self-hosted PostgreSQL on VPS)
+- **Auth**: JWT via `jose` (NOT Supabase Auth) — cookie `admin_session`, 7 days
+- **Maps**: Leaflet + react-leaflet + react-leaflet-cluster
+- **Icons**: Lucide React
+- **Deployment**: Docker on VPS via `scripts/deploy.sh`
+
+## Key Architecture Decisions
+- Admin auth uses JWT (`lib/admin-auth.ts`), NOT Supabase Auth (avoids GoTrueClient conflicts)
+- Middleware (`proxy.ts`) protects `/admin/*` routes
+- Admin entry point: `/staff` → `/admin/login`
+- Server Actions in `app/actions.ts` for all DB operations
+- Supabase admin client (`lib/supabase/admin.ts`) bypasses RLS with service role key
+- Single DB for dev and prod (be careful with writes!)
+
+## File Structure Conventions
+- Public pages: `app/` (App Router)
+- Admin pages: `app/admin/`
+- API routes: `app/api/`
+- Server Actions: `app/actions.ts`, `app/actions/`
+- UI components: `components/ui/` (shadcn/ui)
+- Public site components: `components/calming/`
+- Admin components: `components/admin/`
+- Map components: `components/map/`
+- Utilities: `lib/`
+- DB clients: `lib/supabase/`
+
+## Code Style
+- Language: TypeScript strict mode
+- Path aliases: `@/` = project root
+- Async params in Next.js: `params: Promise<{ id: string }>`
+- Use `"use client"` directive for client components
+- Prefer Server Components by default
+- Phone mask format: `+7 (___) ___-__-__`
+- Date format: Russian locale ("16 дек. 2024")
+- All user-facing text in Russian
+
+## Database
+- Tables: `land_plots`, `news`, `leads`, `subscribers`, `users`, `admin_users`, `commercial_proposals`, `organization_settings`, `social_posts`, `social_settings`, `social_logs`, `faq_items`, `legal_content`, `settlement_descriptions`, `kladr_places`, `kladr_streets`, `import_logs`, etc.
+- Schema changes: ONLY via SQL migrations in repo
+- RLS enabled on most tables
+- Storage bucket: `land-images` (public)
+
+## Environment Variables (critical)
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `JWT_SECRET`
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ADMIN_CHAT_ID`
+- `VK_ACCESS_TOKEN`, `VK_GROUP_ID`
+- `OK_ACCESS_TOKEN`, `OK_GROUP_ID`, `OK_APPLICATION_KEY`, `OK_SESSION_SECRET_KEY`
+- **NEVER** deploy local .env files to server — server has its own
+
+## Deployment
+- Script: `bash scripts/deploy.sh` from project root
+- Process: rsync → docker build → restart container `rkkland_web`
+- DB is NOT affected by deploy (separate volumes)
+- GitHub push: `git push origin main`
+
+## Important Rules
+1. **PROGRESS.md** — keep this file updated after every significant change
+2. **PROJECT_STRUCTURE.md** — update when adding new files/components/APIs
+3. Never hardcode API keys
+4. Test locally before deploying (`npm run dev`)
+5. Don't delete or weaken existing tests
+6. Prefer minimal edits over large rewrites
+7. Always use Russian for user-facing strings
+8. Map component is in `components/map/leaflet-catalog-map.tsx` — complex file, read before editing
+9. Social media publishing: VK (`lib/vk-api.ts`), OK (`lib/ok-api.ts`)
+10. Telegram bot: webhook at `/api/telegram/webhook`, config in `organization_settings`
+
+## Mobile-Specific Patterns
+- Mobile detection: `window.innerWidth < 768` with resize listener (`isMobileView` state)
+- Touch detection: `'ontouchstart' in window || navigator.maxTouchPoints > 0` (`isTouchDevice`)
+- Floating buttons: Phone (`components/ui/floating-phone.tsx`) bottom-left, Chat bottom-right — both `md:hidden`
+- Mobile catalog: hidden until "Показать" button clicked (`mobileShowCatalog` state)
+- Mobile menu (Sheet): includes nav, phone, "Записаться на просмотр" button, social media pills
+
+## Map Performance (leaflet-catalog-map.tsx)
+- Polygons render only at zoom ≥ 14 (not at all zoom levels)
+- Viewport culling: only polygons in `mapBounds.pad(0.3)` are rendered
+- No `d` CSS transition on SVG paths (causes massive repaints)
+- No hover events (`mouseover`/`mouseout`) on touch devices
+- No spiderfy (`spiderfyOnMaxZoom={false}`) — clusters zoom on click
+- `animateAddingMarkers={false}` to reduce load
+
+## Known Gotchas
+- Supabase Auth causes GoTrueClient conflicts → use JWT auth instead
+- Bcrypt hash issues → use `/admin/fix-password` to reset
+- Cookie must be set in API route, not middleware
+- `react-leaflet-cluster` CSS animations need `!important` to override built-in styles
+- 2GIS URL format: `https://2gis.ru/directions/points/LON,LAT|LON,LAT`
+- Radix UI Sheet/Dialog requires `SheetTitle`/`DialogTitle` for accessibility (use `sr-only` class to hide visually)

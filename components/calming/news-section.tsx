@@ -197,11 +197,13 @@ export function NewsSection({ news }: NewsSectionProps) {
                 className="group rounded-3xl bg-card border border-border/50 overflow-hidden hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-2 flex-none w-[calc(100vw-2rem)] md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.5rem)] snap-start first:ml-4 last:mr-4 md:first:ml-0 md:last:mr-0"
               >
                 {/* Image */}
-                <Link href={`/news/${item.id}`} className="block relative h-56 bg-secondary/20 overflow-hidden">
+                <Link href={`/news/${item.id}`} className="block relative h-56 bg-white overflow-hidden">
                   <Image
                     src={item.image_url || ""}
                     alt={item.title}
                     fill
+                    loading="lazy"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-700"
                   />
                 </Link>

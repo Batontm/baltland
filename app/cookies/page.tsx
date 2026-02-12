@@ -3,7 +3,7 @@ import { Footer } from "@/components/calming/footer"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-    title: "Соглашение об использовании файлов cookie | БалтикЗемля",
+    title: "Соглашение об использовании файлов cookie",
     description: "Узнайте, как и для чего мы используем файлы cookie на сайте БалтикЗемля.",
     alternates: {
         canonical: "https://baltland.ru/cookies",

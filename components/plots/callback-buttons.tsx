@@ -140,8 +140,7 @@ export function CallbackButtons({ phone, plotTitle, cadastralNumber, plotId, loc
         {/* Viewing request button */}
         <Button
           size="lg"
-          variant="outline"
-          className="rounded-full px-6 bg-transparent"
+          className="rounded-full px-6"
           onClick={() => setIsDialogOpen(true)}
         >
           <Calendar className="h-4 w-4 mr-2" />

@@ -1,6 +1,11 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
+import type { Metadata } from "next"
 import { getLandPlotBundleById } from "@/app/actions"
 import { buildPlotSeoPath } from "@/lib/utils"
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 interface PlotRedirectPageProps {
   params: Promise<{ id: string }>
@@ -19,5 +24,5 @@ export default async function PlotRedirectPage({ params }: PlotRedirectPageProps
     intId: plot.int_id || plot.id,
   })
 
-  redirect(seoPath)
+  permanentRedirect(seoPath)
 }

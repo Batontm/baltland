@@ -16,6 +16,7 @@ interface SharePopupProps {
     location?: string
     className?: string
     iconClassName?: string
+    variant?: "icon" | "button"
 }
 
 export function SharePopup({
@@ -28,6 +29,7 @@ export function SharePopup({
     location,
     className,
     iconClassName,
+    variant = "icon",
 }: SharePopupProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [copied, setCopied] = useState(false)
@@ -158,18 +160,29 @@ export function SharePopup({
     return (
         <div className={cn("relative", className)} ref={popupRef}>
             {/* Share Button */}
-            <button
-                onClick={handleShare}
-                className="w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-sm group/share"
-                aria-label="Поделиться"
-            >
-                <Share2
-                    className={cn(
-                        "h-4 w-4 transition-colors text-slate-400 group-hover/share:text-slate-600",
-                        iconClassName
-                    )}
-                />
-            </button>
+            {variant === "button" ? (
+                <button
+                    onClick={handleShare}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-sm font-medium transition-colors"
+                    aria-label="Поделиться"
+                >
+                    <Share2 className="h-4 w-4" />
+                    Поделиться
+                </button>
+            ) : (
+                <button
+                    onClick={handleShare}
+                    className="w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-sm group/share"
+                    aria-label="Поделиться"
+                >
+                    <Share2
+                        className={cn(
+                            "h-4 w-4 transition-colors text-slate-400 group-hover/share:text-slate-600",
+                            iconClassName
+                        )}
+                    />
+                </button>
+            )}
 
             {/* Popup */}
             {isOpen && (

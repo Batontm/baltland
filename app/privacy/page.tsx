@@ -3,7 +3,7 @@ import { Footer } from "@/components/calming/footer"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-    title: "Политика конфиденциальности | БалтикЗемля",
+    title: "Политика конфиденциальности",
     description: "Политика обработки персональных данных на сайте БалтикЗемля. Узнайте, как мы собираем, используем и защищаем ваши данные.",
     alternates: {
         canonical: "https://baltland.ru/privacy",
