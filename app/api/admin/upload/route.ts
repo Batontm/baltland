@@ -7,6 +7,12 @@ const ALLOWED_MIME_TYPES = new Set([
     "image/jpeg", "image/png", "image/webp", "image/svg+xml", "application/pdf"
 ])
 
+function normalizeType(type: string) {
+    const t = String(type || "").trim()
+    if (t === "home-promo") return "home/promo"
+    return t || "legal"
+}
+
 function jsonError(message: string, status = 400) {
     return NextResponse.json({ success: false, error: message }, { status })
 }
@@ -34,7 +40,8 @@ export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData()
         const file = formData.get("file")
-        const type = formData.get("type") as string || "legal"
+        const typeRaw = (formData.get("type") as string) || "legal"
+        const type = normalizeType(typeRaw)
 
         if (!(file instanceof File)) {
             return jsonError("File is required")
@@ -43,6 +50,10 @@ export async function POST(request: NextRequest) {
         const contentType = file.type || "application/octet-stream"
         if (!ALLOWED_MIME_TYPES.has(contentType)) {
             return jsonError("Unsupported file type")
+        }
+
+        if (type === "home/promo" && !contentType.startsWith("image/")) {
+            return jsonError("Only images are allowed for home promo")
         }
 
         const ext = getExtensionFromFile(file)

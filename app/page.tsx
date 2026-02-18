@@ -5,11 +5,11 @@ export const revalidate = 60
 import { Header } from "@/components/calming/header"
 import { HeroSection } from "@/components/calming/hero-section"
 import { CatalogWithFilters } from "@/components/calming/catalog-with-filters"
-import { NewsSection } from "@/components/calming/news-section"
+import { GeodesyPromoSection } from "@/components/calming/geodesy-promo-section"
 import { HomeNewBlock } from "@/components/calming/home-new-block"
 import { ContactSection } from "@/components/calming/contact-section"
 import { Footer } from "@/components/calming/footer"
-import type { LandPlot, MapSettings, News } from "@/lib/types"
+import type { LandPlot, MapSettings } from "@/lib/types"
 import type { Metadata } from "next"
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -72,21 +72,11 @@ export default async function Home() {
     }
   }
 
-  const { data: newsData, error: newsError } = await supabase
-    .from("news")
-    .select("*")
-    .eq("is_published", true)
-    .order("published_at", { ascending: false })
-
-  let news: News[] = []
-  // Only use news if table exists and query succeeded
-  if (!newsError && newsData) {
-    news = newsData as News[]
-  }
-
   const { data: homeBlockSettings } = await supabase
     .from("organization_settings")
-    .select("home_block_progressive_disclosure, home_block_roi_calculator, home_block_faq, map_settings")
+    .select(
+      "home_block_progressive_disclosure, home_block_roi_calculator, home_block_faq, map_settings, home_promo_1_image_url, home_promo_1_href, home_promo_2_image_url, home_promo_2_href",
+    )
     .eq("id", "00000000-0000-0000-0000-000000000001")
     .maybeSingle()
 
@@ -118,7 +108,16 @@ export default async function Home() {
           faq: (homeBlockSettings as any)?.home_block_faq ?? null,
         }}
       />
-      {news.length > 0 && <NewsSection news={news} />}
+      <GeodesyPromoSection
+        promo1={{
+          imageUrl: (homeBlockSettings as any)?.home_promo_1_image_url ?? null,
+          href: (homeBlockSettings as any)?.home_promo_1_href ?? null,
+        }}
+        promo2={{
+          imageUrl: (homeBlockSettings as any)?.home_promo_2_image_url ?? null,
+          href: (homeBlockSettings as any)?.home_promo_2_href ?? null,
+        }}
+      />
       <ContactSection />
       <Footer />
     </main>

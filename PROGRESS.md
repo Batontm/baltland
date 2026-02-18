@@ -6,6 +6,23 @@
 
 ## Февраль 2026
 
+### 2026-02-17 — Промо «Геодезия в подарок» на главной
+
+- `app/page.tsx` — блок новостей заменён на промо-секцию с картинкой и кнопкой «Подробнее»
+- `components/calming/geodesy-promo-section.tsx` — новый промо-блок с CTA → `/geodesy`
+- `app/geodesy/page.tsx` — добавлена страница подробного описания
+- `public/geodesy-promo.jpeg` — промо-изображение для секции и страницы
+- `app/cadastral-discount/page.tsx` — добавлена страница акции «Скидка 50% на кадастровые услуги»
+- `public/geodesy-promo-2.jpeg` — второе промо-изображение
+- Админка (Настройки) — добавлено управление двумя промо-плашками с кадрированием (как аватарка) и загрузкой в Supabase Storage
+- `components/admin/dashboard/settings/home-promo-card.tsx` — новый UI для загрузки/кадра промо
+- `app/api/admin/upload/route.ts` — добавлен тип `home-promo` → путь `home/promo/*`
+
+### 2026-02-16 — Оптимизация hero-изображения для LCP (мобильные)
+
+- `public/kaliningrad-map-hero.webp` — уменьшено разрешение с 1024×1024 до 768×768, сжатие WebP (quality 72)
+- Цель: ускорить LCP/FCP на мобильных в PageSpeed Insights
+
 ### 2026-02-10 — PageSpeed: оптимизация производительности и доступности
 
 **Проблема**: Lighthouse показал Performance 28 (mobile), TTFB ~970мс, TBT 2200мс, Accessibility 85.

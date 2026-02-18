@@ -10,6 +10,7 @@ import { PlotDescriptionSettingsCard } from "@/components/admin/dashboard/settin
 import { PreviewDialog } from "@/components/admin/dashboard/settings/preview-dialog"
 import { VKBulkExportCard } from "@/components/admin/dashboard/settings/vk-bulk-export-card"
 import { AboutSettingsCard } from "@/components/admin/dashboard/settings/about-settings-card"
+import { HomePromoCard } from "@/components/admin/dashboard/settings/home-promo-card"
 
 
 interface SettingsTabProps {
@@ -112,6 +113,8 @@ export function SettingsTab({ orgSettings, loadingSettings, onChange, onSave }: 
         onDelete={(id) => void handleDeletePlaceholder(id)}
         onPreview={(url) => setPreviewUrl(url)}
       />
+
+      <HomePromoCard orgSettings={orgSettings} loadingSettings={loadingSettings} onChange={onChange} onSave={onSave} />
 
       <PlotDescriptionSettingsCard orgSettings={orgSettings} loadingSettings={loadingSettings} onChange={onChange} onSave={onSave} />
 

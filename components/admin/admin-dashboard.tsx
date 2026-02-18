@@ -106,6 +106,7 @@ import { SubscribersTab } from "@/components/admin/dashboard/subscribers-tab"
 import { UsersTab } from "@/components/admin/dashboard/users-tab"
 import { PlotsTab, type PlotStatusFilter } from "@/components/admin/dashboard/plots-tab"
 import { SettingsTab } from "@/components/admin/dashboard/settings-tab"
+import { HomePromoCard } from "@/components/admin/dashboard/settings/home-promo-card"
 import { TelegramTab } from "@/components/admin/dashboard/telegram-tab"
 import { ImportTab } from "@/components/admin/dashboard/import-tab"
 import { SettlementDescriptionsTab } from "@/components/admin/dashboard/settlement-descriptions-tab"
@@ -965,7 +966,17 @@ export function AdminDashboard({
   }, [plotDistrictFilter])
 
   // Settings sections that require orgSettings
-  const settingsSections: AdminSection[] = ["contacts", "social", "placeholders", "proposal-fields", "home-new-block", "map", "nspd", "chat-settings"]
+  const settingsSections: AdminSection[] = [
+    "contacts",
+    "social",
+    "placeholders",
+    "proposal-fields",
+    "home-new-block",
+    "home-promo",
+    "map",
+    "nspd",
+    "chat-settings",
+  ]
   const isSettingsSection = settingsSections.includes(activeSection)
 
   useEffect(() => {
@@ -1578,6 +1589,22 @@ export function AdminDashboard({
       case "home-new-block":
         return orgSettings ? (
           <HomeNewBlockCard orgSettings={orgSettings} loadingSettings={loadingSettings} onSave={handleSaveSettings} />
+        ) : (
+          <Card className="rounded-2xl">
+            <CardContent className="p-8 text-center text-muted-foreground">
+              {loadingSettings ? "Загрузка настроек..." : "Не удалось загрузить настройки"}
+            </CardContent>
+          </Card>
+        )
+
+      case "home-promo":
+        return orgSettings ? (
+          <HomePromoCard
+            orgSettings={orgSettings}
+            loadingSettings={loadingSettings}
+            onChange={(patch) => setOrgSettings(orgSettings ? { ...orgSettings, ...patch } : null)}
+            onSave={handleSaveSettings}
+          />
         ) : (
           <Card className="rounded-2xl">
             <CardContent className="p-8 text-center text-muted-foreground">

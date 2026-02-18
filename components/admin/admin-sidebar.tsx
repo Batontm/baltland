@@ -53,6 +53,7 @@ export type AdminSection =
     | "users"
     | "contacts"
     | "home-new-block"
+    | "home-promo"
     | "social"
     | "placeholders"
     | "proposal-fields"
@@ -126,6 +127,7 @@ const menuGroups: MenuGroup[] = [
             { id: "users", label: "Пользователи", icon: <Users className="h-4 w-4" /> },
             { id: "contacts", label: "Контакты", icon: <Phone className="h-4 w-4" /> },
             { id: "home-new-block", label: "Главная: новый блок", icon: <Sparkles className="h-4 w-4" /> },
+            { id: "home-promo", label: "Главная: промо", icon: <Image className="h-4 w-4" /> },
             { id: "social", label: "Соцсети", icon: <Share2 className="h-4 w-4" /> },
             { id: "placeholders", label: "Плейсхолдеры", icon: <Image className="h-4 w-4" /> },
             { id: "proposal-fields", label: "КП поля", icon: <FileEdit className="h-4 w-4" /> },

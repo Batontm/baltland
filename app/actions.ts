@@ -1788,7 +1788,10 @@ export async function updateOrganizationSettings(
 
   if (error) {
     console.error("Error updating organization settings:", error)
-    return { success: false, error: "Ошибка обновления настроек" }
+    const details = [error.message, (error as any).code, (error as any).details, (error as any).hint]
+      .filter(Boolean)
+      .join(" | ")
+    return { success: false, error: details || "Ошибка обновления настроек" }
   }
 
   revalidatePath("/admin")

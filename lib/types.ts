@@ -298,6 +298,10 @@ export interface OrganizationSettings {
   address: string
   logo_url: string | null
   favicon_url?: string | null
+  home_promo_1_image_url?: string | null
+  home_promo_1_href?: string | null
+  home_promo_2_image_url?: string | null
+  home_promo_2_href?: string | null
   home_block_progressive_disclosure?: unknown | null
   home_block_roi_calculator?: unknown | null
   home_block_faq?: unknown | null
