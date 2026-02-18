@@ -81,15 +81,15 @@ function DirectionsButton({ lat, lon, className }: { lat?: number | null; lon?: 
 
   const options = isMobile
     ? [
-        { label: "Яндекс Навигатор", url: fromLat ? `yandexnavi://build_route_on_map?lat_from=${fromLat}&lon_from=${fromLon}&lat_to=${lat}&lon_to=${lon}` : `yandexnavi://build_route_on_map?lat_to=${lat}&lon_to=${lon}` },
-        { label: "Google Maps", url: fromLat ? `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLon}&destination=${lat},${lon}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` },
-        { label: "2ГИС", url: fromLat ? `https://2gis.ru/directions/points/${fromLon},${fromLat}|${lon},${lat}` : `https://2gis.ru/directions/points/|${lon},${lat}` },
-      ]
+      { label: "Яндекс Навигатор", url: fromLat ? `yandexnavi://build_route_on_map?lat_from=${fromLat}&lon_from=${fromLon}&lat_to=${lat}&lon_to=${lon}` : `yandexnavi://build_route_on_map?lat_to=${lat}&lon_to=${lon}` },
+      { label: "Google Maps", url: fromLat ? `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLon}&destination=${lat},${lon}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` },
+      { label: "2ГИС", url: fromLat ? `https://2gis.ru/directions/points/${fromLon},${fromLat}|${lon},${lat}` : `https://2gis.ru/directions/points/|${lon},${lat}` },
+    ]
     : [
-        { label: "Яндекс Карты", url: fromLat ? `https://yandex.ru/maps/?rtext=${fromLat},${fromLon}~${lat},${lon}&rtt=auto` : `https://yandex.ru/maps/?rtext=~${lat},${lon}&rtt=auto` },
-        { label: "Google Maps", url: fromLat ? `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLon}&destination=${lat},${lon}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` },
-        { label: "2ГИС", url: fromLat ? `https://2gis.ru/directions/points/${fromLon},${fromLat}|${lon},${lat}` : `https://2gis.ru/directions/points/|${lon},${lat}` },
-      ]
+      { label: "Яндекс Карты", url: fromLat ? `https://yandex.ru/maps/?rtext=${fromLat},${fromLon}~${lat},${lon}&rtt=auto` : `https://yandex.ru/maps/?rtext=~${lat},${lon}&rtt=auto` },
+      { label: "Google Maps", url: fromLat ? `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLon}&destination=${lat},${lon}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` },
+      { label: "2ГИС", url: fromLat ? `https://2gis.ru/directions/points/${fromLon},${fromLat}|${lon},${lat}` : `https://2gis.ru/directions/points/|${lon},${lat}` },
+    ]
 
   return (
     <>
@@ -799,9 +799,11 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                       type="text"
                       inputMode="numeric"
                       value={priceRange[0].toLocaleString("ru-RU")}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => {
-                        const value = parseInt(e.target.value.replace(/\D/g, ""), 10) || 0
-                        setPriceRange([value, priceRange[1]])
+                        const raw = e.target.value.replace(/\D/g, "")
+                        const value = raw === "" ? 0 : parseInt(raw, 10)
+                        if (!Number.isNaN(value)) setPriceRange([value, priceRange[1]])
                       }}
                       className={`w-32 h-10 text-sm text-center rounded-lg bg-secondary/30 border-2 ${priceRange[0] > priceRange[1] ? "border-red-500" : "border-transparent"
                         }`}
@@ -812,9 +814,11 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                       type="text"
                       inputMode="numeric"
                       value={priceRange[1].toLocaleString("ru-RU")}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => {
-                        const value = parseInt(e.target.value.replace(/\D/g, ""), 10) || 0
-                        setPriceRange([priceRange[0], Math.max(minPriceFromData, value)])
+                        const raw = e.target.value.replace(/\D/g, "")
+                        const value = raw === "" ? 0 : parseInt(raw, 10)
+                        if (!Number.isNaN(value)) setPriceRange([priceRange[0], Math.max(minPriceFromData, value)])
                       }}
                       className={`w-32 h-10 text-sm text-center rounded-lg bg-secondary/30 border-2 ${priceRange[1] < priceRange[0] ? "border-red-500" : "border-transparent"
                         }`}
