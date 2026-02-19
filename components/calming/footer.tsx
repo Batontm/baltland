@@ -62,6 +62,7 @@ export function Footer() {
     ],
     company: [
       { label: "О компании", href: "/about" },
+      { label: "Полезные статьи", href: "/blog" },
       { label: "Помощь покупателю", href: "/faq" },
       { label: "Контакты", href: "/contacts" },
     ],

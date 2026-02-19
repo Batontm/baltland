@@ -8,6 +8,7 @@ import { CatalogWithFilters } from "@/components/calming/catalog-with-filters"
 import { GeodesyPromoSection } from "@/components/calming/geodesy-promo-section"
 import { HomeNewBlock } from "@/components/calming/home-new-block"
 import { ContactSection } from "@/components/calming/contact-section"
+import { BlogPreviewSection } from "@/components/calming/blog-preview-section"
 import { Footer } from "@/components/calming/footer"
 import type { LandPlot, MapSettings } from "@/lib/types"
 import type { Metadata } from "next"
@@ -82,6 +83,14 @@ export default async function Home() {
 
   const mapSettings = ((homeBlockSettings as any)?.map_settings ?? null) as MapSettings | null
 
+  // Fetch blog articles for homepage preview
+  const { data: blogArticles } = await supabase
+    .from("news")
+    .select("id, title, slug, meta_description, content, image_url, published_at")
+    .eq("is_published", true)
+    .order("sort_order", { ascending: true })
+    .limit(4)
+
   const lotCount = (() => {
     const seen = new Set<string>()
     let n = 0
@@ -118,6 +127,7 @@ export default async function Home() {
           href: (homeBlockSettings as any)?.home_promo_2_href ?? null,
         }}
       />
+      <BlogPreviewSection articles={blogArticles || []} />
       <ContactSection />
       <Footer />
     </main>

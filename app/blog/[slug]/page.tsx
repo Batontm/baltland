@@ -11,6 +11,7 @@ import type { Metadata } from "next"
 import { SiteBreadcrumb } from "@/components/site-breadcrumb"
 import { NewsArticleJsonLd } from "@/components/seo/article-jsonld"
 import { BlogCTA } from "@/components/blog/blog-cta"
+import { RelatedArticles } from "@/components/blog/related-articles"
 
 export const revalidate = 3600
 
@@ -82,6 +83,16 @@ export default async function BlogArticlePage({ params }: PageProps) {
     if (!article) {
         notFound()
     }
+
+    // Fetch related articles (excluding current)
+    const supabase = await createClient()
+    const { data: relatedArticles } = await supabase
+        .from("news")
+        .select("id, title, slug, meta_description, content, image_url, published_at")
+        .eq("is_published", true)
+        .neq("id", article.id)
+        .order("sort_order", { ascending: true })
+        .limit(3)
 
     return (
         <main className="min-h-screen bg-background">
@@ -206,6 +217,9 @@ export default async function BlogArticlePage({ params }: PageProps) {
 
                     {/* CTA Block */}
                     <BlogCTA />
+
+                    {/* Related Articles */}
+                    <RelatedArticles articles={relatedArticles || []} />
 
                     {/* Footer Navigation */}
                     <div className="mt-12 pt-10 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-6">
