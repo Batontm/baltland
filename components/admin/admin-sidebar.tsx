@@ -114,7 +114,7 @@ const menuGroups: MenuGroup[] = [
         label: "КОНТЕНТ",
         icon: <FileText className="h-4 w-4" />,
         items: [
-            { id: "news", label: "Новости", icon: <Newspaper className="h-4 w-4" /> },
+            { id: "news", label: "Блог", icon: <Newspaper className="h-4 w-4" /> },
             { id: "faq", label: "FAQ", icon: <HelpCircle className="h-4 w-4" /> },
             { id: "legal", label: "Юрид. чистота", icon: <ShieldCheck className="h-4 w-4" /> },
         ],

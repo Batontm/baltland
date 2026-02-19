@@ -510,7 +510,7 @@ export async function createPlot(data: Partial<LandPlot>): Promise<LandPlot | nu
   // Notify IndexNow for active plots
   if (plot.is_active) {
     import("@/lib/indexnow").then(({ submitToIndexNow }) => {
-      submitToIndexNow([`/plots/${plot.int_id || plot.id}/plot`]).catch(() => {})
+      submitToIndexNow([`/plots/${plot.int_id || plot.id}/plot`]).catch(() => { })
     })
   }
 
@@ -642,7 +642,7 @@ export async function updatePlot(id: string, data: Partial<LandPlot>): Promise<L
   // Notify IndexNow for active plots
   if (plot.is_active) {
     import("@/lib/indexnow").then(({ submitToIndexNow }) => {
-      submitToIndexNow([`/plots/${plot.int_id || plot.id}/plot`]).catch(() => {})
+      submitToIndexNow([`/plots/${plot.int_id || plot.id}/plot`]).catch(() => { })
     })
   }
 
@@ -1403,7 +1403,7 @@ export async function getNews(publishedOnly = false): Promise<News[]> {
   return data as News[]
 }
 
-export async function createNews(data: { title: string; content: string; image_url?: string }): Promise<News | null> {
+export async function createNews(data: { title: string; content: string; image_url?: string; slug?: string; meta_title?: string; meta_description?: string; sort_order?: number }): Promise<News | null> {
   const supabase = createAdminClient()
 
   const { data: news, error } = await supabase
@@ -1412,6 +1412,10 @@ export async function createNews(data: { title: string; content: string; image_u
       title: data.title,
       content: data.content,
       image_url: data.image_url || null,
+      slug: data.slug || null,
+      meta_title: data.meta_title || null,
+      meta_description: data.meta_description || null,
+      sort_order: data.sort_order || 0,
       is_published: false,
     })
     .select()
@@ -1423,6 +1427,7 @@ export async function createNews(data: { title: string; content: string; image_u
   }
 
   revalidatePath("/")
+  revalidatePath("/blog")
   revalidatePath("/admin")
 
   return news as News
@@ -1430,7 +1435,7 @@ export async function createNews(data: { title: string; content: string; image_u
 
 export async function updateNews(
   id: string,
-  data: { title?: string; content?: string; image_url?: string; is_published?: boolean },
+  data: { title?: string; content?: string; image_url?: string; is_published?: boolean; slug?: string; meta_title?: string; meta_description?: string; sort_order?: number },
 ): Promise<News | null> {
   const supabase = createAdminClient()
 
@@ -1451,14 +1456,17 @@ export async function updateNews(
     throw new Error(error.message)
   }
 
-  // Notify IndexNow when news is published
+  // Notify IndexNow when article is published
   if (data.is_published && news) {
+    const slug = (news as News).slug
+    const blogPath = slug ? `/blog/${slug}` : `/blog`
     import("@/lib/indexnow").then(({ submitToIndexNow }) => {
-      submitToIndexNow([`/news/${news.id}`]).catch(() => {})
+      submitToIndexNow([blogPath]).catch(() => { })
     })
   }
 
   revalidatePath("/")
+  revalidatePath("/blog")
   revalidatePath("/admin")
 
   return news as News
@@ -3133,7 +3141,7 @@ export async function applySettlementDescriptionToPlots(
       if (updatedPlots && updatedPlots.length > 0) {
         import("@/lib/indexnow").then(({ submitToIndexNow }) => {
           const urls = updatedPlots.map(p => `/plots/${p.int_id || p.id}/plot`)
-          submitToIndexNow(urls).catch(() => {})
+          submitToIndexNow(urls).catch(() => { })
         })
       }
     }

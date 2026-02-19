@@ -40,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     },
     {
-      url: `${baseUrl}/news`,
+      url: `${baseUrl}/blog`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.7,
@@ -95,7 +95,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from("land_plots")
       .select("id, int_id, updated_at, location, district, area_sotok, bundle_id, is_bundle_primary")
       .eq("is_active", true),
-    supabase.from("news").select("id, published_at, updated_at").eq("is_published", true),
+    supabase.from("news").select("id, slug, published_at, updated_at").eq("is_published", true),
   ])
 
   const plots = plotsRes.error ? [] : (plotsRes.data || [])
@@ -203,12 +203,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return out
   })()
 
-  const newsRoutes: MetadataRoute.Sitemap = (news || []).map((n: any) => ({
-    url: `${baseUrl}/news/${n.id}`,
+  const blogRoutes: MetadataRoute.Sitemap = (news || []).map((n: any) => ({
+    url: `${baseUrl}/blog/${n.slug || n.id}`,
     lastModified: n.published_at ? new Date(n.published_at) : n.updated_at ? new Date(n.updated_at) : undefined,
     changeFrequency: "weekly",
-    priority: 0.5,
+    priority: 0.6,
   }))
 
-  return [...staticRoutes, ...seoRoutes, ...catalogRoutes, ...plotRoutes, ...newsRoutes]
+  return [...staticRoutes, ...seoRoutes, ...catalogRoutes, ...plotRoutes, ...blogRoutes]
 }

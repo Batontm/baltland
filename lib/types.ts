@@ -228,11 +228,15 @@ export const USER_ROLE_OPTIONS = [
 
 export interface News {
   id: string
+  slug: string | null
   title: string
+  meta_title: string | null
+  meta_description: string | null
   content: string
   image_url: string | null
   is_published: boolean
   author?: string | null
+  sort_order: number
   published_at: string | null
   created_at: string
   updated_at: string

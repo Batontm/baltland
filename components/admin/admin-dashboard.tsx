@@ -312,6 +312,10 @@ export function AdminDashboard({
     content: "",
     author: "",
     image_url: "",
+    slug: "",
+    meta_title: "",
+    meta_description: "",
+    sort_order: 0,
     is_published: false,
   })
 
@@ -639,7 +643,7 @@ export function AdminDashboard({
 
   // NEWS HANDLERS
   const handleCreateNews = () => {
-    setNewsFormData({ title: "", content: "", author: "", image_url: "", is_published: false })
+    setNewsFormData({ title: "", content: "", author: "", image_url: "", slug: "", meta_title: "", meta_description: "", sort_order: 0, is_published: false })
     setIsCreatingNews(true)
     setEditingNews(null)
   }
@@ -651,7 +655,7 @@ export function AdminDashboard({
   }
 
   const handleCancelNews = () => {
-    setNewsFormData({ title: "", content: "", author: "", image_url: "", is_published: false })
+    setNewsFormData({ title: "", content: "", author: "", image_url: "", slug: "", meta_title: "", meta_description: "", sort_order: 0, is_published: false })
     setIsCreatingNews(false)
     setEditingNews(null)
   }
@@ -664,6 +668,10 @@ export function AdminDashboard({
           title: newsFormData.title || "",
           content: newsFormData.content || "",
           image_url: newsFormData.image_url || undefined,
+          slug: newsFormData.slug || undefined,
+          meta_title: newsFormData.meta_title || undefined,
+          meta_description: newsFormData.meta_description || undefined,
+          sort_order: newsFormData.sort_order || 0,
         })
         if (newNewsItem) setNews([newNewsItem, ...news])
       } else if (editingNews) {
@@ -672,20 +680,24 @@ export function AdminDashboard({
           content: newsFormData.content,
           image_url: newsFormData.image_url || undefined,
           is_published: newsFormData.is_published,
+          slug: newsFormData.slug || undefined,
+          meta_title: newsFormData.meta_title || undefined,
+          meta_description: newsFormData.meta_description || undefined,
+          sort_order: newsFormData.sort_order,
         })
         if (updatedNewsItem) setNews(news.map((n) => (n.id === editingNews.id ? updatedNewsItem : n)))
       }
       handleCancelNews()
     } catch (error) {
       console.error("Error saving news:", error)
-      alert("Ошибка сохранения новости.")
+      alert("Ошибка сохранения статьи.")
     } finally {
       setLoading(false)
     }
   }
 
   const handleDeleteNews = async (id: string) => {
-    if (!confirm("Удалить эту новость?")) return
+    if (!confirm("Удалить эту статью?")) return
     setLoading(true)
     try {
       await deleteNewsAction(id)
