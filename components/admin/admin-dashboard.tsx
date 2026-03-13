@@ -64,6 +64,7 @@ import {
   updatePlot,
   deletePlot,
   updateLead,
+  createLead,
   deleteLead,
   deleteSubscriber,
   createUser,
@@ -118,6 +119,7 @@ import { NspdTab } from "@/components/admin/dashboard/nspd-tab"
 
 import { CreateProposalDialog } from "@/components/admin/dashboard/proposals/create-proposal-dialog"
 import { ProposalPreviewDialog } from "@/components/admin/dashboard/proposals/proposal-preview-dialog"
+import { UniversalProposalTool } from "@/components/admin/dashboard/proposals/universal-proposal-tool"
 import ProposalPDFView from "@/components/admin/proposal-pdf-view"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { type AdminSection } from "@/components/admin/admin-sidebar"
@@ -244,6 +246,8 @@ export function AdminDashboard({
 
   const [showProposalPreview, setShowProposalPreview] = useState(false)
   const [selectedProposal, setSelectedProposal] = useState<CommercialProposalWithDetails | null>(null)
+  const [proposalPreviewLeadName, setProposalPreviewLeadName] = useState<string | null>(null)
+  const [proposalPreviewLeadPhone, setProposalPreviewLeadPhone] = useState<string | null>(null)
   const [isDownloadingProposalPDF, setIsDownloadingProposalPDF] = useState(false)
   const pdfCaptureRef = useRef<HTMLDivElement | null>(null)
   const [pdfRenderSettings, setPdfRenderSettings] = useState<OrganizationSettings | null>(null)
@@ -372,6 +376,15 @@ export function AdminDashboard({
       setBundleRows([{ cadastral_number: "", area_sotok: "", ownership_type: "ownership" }])
       setIsBundleMode(false)
     }
+  }
+
+  const handleDownloadUniversalProposalPDF = async (
+    proposal: CommercialProposalWithDetails,
+    leadName: string,
+    leadPhone: string
+  ) => {
+    setSelectedLead(null)
+    await handleDownloadProposalPDF(proposal, { name: leadName, phone: leadPhone })
   }
 
   const handleCancelPlot = () => {
@@ -816,7 +829,75 @@ export function AdminDashboard({
         setLoadingSettings(false)
       }
       setSelectedProposal(proposal)
+      setProposalPreviewLeadName(proposal.lead?.name || null)
+      setProposalPreviewLeadPhone(proposal.lead?.phone || selectedLead?.phone || null)
       setShowProposalPreview(true)
+    }
+  }
+
+  const handlePreviewUniversalProposal = (
+    proposal: CommercialProposalWithDetails,
+    leadName: string,
+    leadPhone: string
+  ) => {
+    setSelectedLead(null)
+    setSelectedProposal(proposal)
+    setProposalPreviewLeadName(leadName || null)
+    setProposalPreviewLeadPhone(leadPhone || null)
+    setShowProposalPreview(true)
+  }
+
+  const handleSaveProposalDraftToCRM = async (payload: {
+    leadName: string
+    leadPhone: string
+    title: string
+    description: string
+    selectedPlotIds: string[]
+  }): Promise<{ success: boolean; error?: string }> => {
+    if (payload.selectedPlotIds.length === 0) {
+      return { success: false, error: "Выберите хотя бы один участок" }
+    }
+
+    setLoading(true)
+    try {
+      const wishesParts = [
+        payload.description?.trim(),
+        `Источник: универсальный конструктор КП`,
+        `Название КП: ${payload.title}`,
+      ].filter(Boolean)
+
+      const leadResult = await createLead({
+        name: payload.leadName || "Клиент (подбор КП)",
+        phone: payload.leadPhone || "Не указан",
+        wishes: wishesParts.join("\n"),
+        lead_type: "general",
+      })
+
+      if (!leadResult.success || !leadResult.lead?.id) {
+        return { success: false, error: leadResult.error || "Не удалось создать заявку в CRM" }
+      }
+
+      const proposalResult = await createProposal({
+        lead_id: leadResult.lead.id,
+        title: payload.title,
+        description: payload.description || undefined,
+        plot_ids: payload.selectedPlotIds,
+      })
+
+      if (!proposalResult.success) {
+        return { success: false, error: proposalResult.error || "Не удалось сохранить черновик КП" }
+      }
+
+      setLeads((prev) => [leadResult.lead as Lead, ...prev])
+      const proposals = await getProposalsByLead(leadResult.lead.id)
+      setLeadProposals((prev) => ({ ...prev, [leadResult.lead!.id]: proposals }))
+
+      return { success: true }
+    } catch (error) {
+      console.error("Error saving proposal draft to CRM:", error)
+      return { success: false, error: "Ошибка при сохранении черновика КП" }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -1045,12 +1126,21 @@ export function AdminDashboard({
     }
   }
 
-  const handleDownloadProposalPDF = async () => {
-    if (!selectedProposal) return
+  const handleDownloadProposalPDF = async (
+    proposalOverride?: CommercialProposalWithDetails,
+    leadContext?: { name?: string | null; phone?: string | null }
+  ) => {
+    const proposalForPdf = proposalOverride ?? selectedProposal
+    if (!proposalForPdf) return
     if (isDownloadingProposalPDF) return
 
     setIsDownloadingProposalPDF(true)
     try {
+      if (proposalOverride) {
+        if (leadContext?.name !== undefined) setProposalPreviewLeadName(leadContext.name || null)
+        if (leadContext?.phone !== undefined) setProposalPreviewLeadPhone(leadContext.phone || null)
+      }
+
       // Ensure settings are loaded before generating
       let settings = orgSettings
       if (!settings) {
@@ -1060,34 +1150,232 @@ export function AdminDashboard({
         setLoadingSettings(false)
       }
 
-      setPdfRenderSettings(settings)
-
-      // Ensure the offscreen view is mounted with fresh settings
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-
-      const el = pdfCaptureRef.current
-      if (!el) throw new Error("PDF capture element not found")
-
+      const flatPlots = proposalForPdf.commercial_proposal_plots?.map((pp) => pp.plot) || []
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")])
+      const escapeHtml = (value: string) =>
+        value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;")
 
-      const renderCanvas = async (ignoreImages: boolean) =>
-        await html2canvas(el, {
-          scale: 2,
-          useCORS: true,
+      const formatPrice = (value: number | null | undefined) => {
+        if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "Цена не указана"
+        return `${Math.round(value).toLocaleString("ru-RU")} ₽`
+      }
+
+      const cadastralMap = new Map<string, { district: string; description: string; entries: Array<{ cadastral: string; price: number | null }> }>()
+      for (const plot of flatPlots) {
+        const settlement = (plot.location || "Населенный пункт не указан").trim()
+        const district = (plot.district || "Район не указан").trim()
+        const description = (plot.description || "").trim()
+        const price = Number.isFinite(Number(plot.price)) ? Number(plot.price) : null
+        const cadastrals = [
+          ...(plot.cadastral_number ? [plot.cadastral_number] : []),
+          ...(plot.additional_cadastral_numbers || []),
+        ]
+          .map((cn) => String(cn || "").trim())
+          .filter(Boolean)
+
+        if (!cadastralMap.has(settlement)) {
+          cadastralMap.set(settlement, {
+            district,
+            description,
+            entries: [],
+          })
+        }
+
+        const current = cadastralMap.get(settlement)!
+        if (!current.description && description) current.description = description
+        for (const cn of cadastrals) {
+          if (!current.entries.some((entry) => entry.cadastral === cn)) {
+            current.entries.push({ cadastral: cn, price })
+          }
+        }
+      }
+
+      const settlementGroups = Array.from(cadastralMap.entries())
+        .map(([settlement, data]) => ({
+          settlement,
+          district: data.district,
+          description: data.description || "Описание поселка не указано",
+          entries: data.entries.sort((a, b) => a.cadastral.localeCompare(b.cadastral, "ru")),
+        }))
+        .sort((a, b) => a.settlement.localeCompare(b.settlement, "ru"))
+
+      const settlementSections: Array<{
+        settlement: string
+        district: string
+        description: string
+        entries: Array<{ cadastral: string; price: number | null }>
+        totalEntries: number
+        continuation: boolean
+      }> = []
+      const entriesPerSection = 24
+
+      for (const group of settlementGroups) {
+        if (group.entries.length === 0) {
+          settlementSections.push({
+            settlement: group.settlement,
+            district: group.district,
+            description: group.description,
+            entries: [],
+            totalEntries: 0,
+            continuation: false,
+          })
+          continue
+        }
+
+        for (let i = 0; i < group.entries.length; i += entriesPerSection) {
+          settlementSections.push({
+            settlement: group.settlement,
+            district: group.district,
+            description: group.description,
+            entries: group.entries.slice(i, i + entriesPerSection),
+            totalEntries: group.entries.length,
+            continuation: i > 0,
+          })
+        }
+      }
+
+      const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const pageHeightPx = Math.floor((794 * pageHeight) / pageWidth)
+      const topBottomPaddingPx = 48
+      const pageContentMaxHeight = pageHeightPx - topBottomPaddingPx
+
+      const firstPageHeaderHtml = `<div style="margin-bottom:16px;border-bottom:1px solid #e5e7eb;padding-bottom:12px;">
+          <div style="font-size:24px;font-weight:700;line-height:1.25;">${escapeHtml(proposalForPdf.title || "Коммерческое предложение")}</div>
+          <div style="margin-top:8px;font-size:13px;line-height:1.5;color:#374151;">Клиент: ${escapeHtml(leadContext?.name || proposalPreviewLeadName || "—")} • Телефон: ${escapeHtml(leadContext?.phone || proposalPreviewLeadPhone || "—")}</div>
+          ${proposalForPdf.description ? `<div style="margin-top:8px;font-size:12px;line-height:1.6;color:#4b5563;white-space:pre-wrap;">${escapeHtml(proposalForPdf.description)}</div>` : ""}
+          ${settings?.organization_name ? `<div style="margin-top:8px;font-size:12px;line-height:1.5;color:#4b5563;">${escapeHtml(settings.organization_name)}${settings.phone ? ` • ${escapeHtml(settings.phone)}` : ""}</div>` : ""}
+        </div>`
+      const continuationHeaderHtml = `<div style="margin-bottom:14px;font-size:12px;line-height:1.5;color:#6b7280;">Продолжение коммерческого предложения</div>`
+
+      const sectionHtmlItems = settlementSections.map((section) => {
+        const cadastralColumnsHtml = section.entries.length > 0
+          ? (() => {
+              const columnCount = 2
+              const rowsPerColumn = Math.ceil(section.entries.length / columnCount)
+              const columns = Array.from({ length: columnCount }, (_, idx) =>
+                section.entries.slice(idx * rowsPerColumn, (idx + 1) * rowsPerColumn)
+              )
+
+              return columns
+                .map(
+                  (column) =>
+                    `<div style="flex:1;min-width:0;">${column
+                      .map(
+                        (entry) =>
+                          `<div style="font-size:11px;line-height:1.85;margin-bottom:1px;white-space:nowrap;">
+                            <span>${escapeHtml(entry.cadastral)}</span><span style="margin-left:8px;font-weight:600;">— ${escapeHtml(formatPrice(entry.price))}</span>
+                          </div>`
+                      )
+                      .join("")}</div>`
+                )
+                .join("")
+            })()
+          : `<div style="font-size:11px;line-height:1.6;color:#6b7280;">Кадастровые номера не указаны</div>`
+
+        const sectionHtml = `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:10px;break-inside:avoid;">
+          <div style="font-size:15px;font-weight:700;line-height:1.35;">${escapeHtml(section.settlement)}${section.continuation ? " (продолжение)" : ""}</div>
+          <div style="font-size:12px;line-height:1.5;color:#4b5563;margin-top:3px;">${escapeHtml(section.district)}</div>
+          ${!section.continuation ? `<div style="font-size:12px;line-height:1.65;color:#4b5563;margin-top:7px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(section.description)}</div>` : ""}
+          <div style="font-size:12px;line-height:1.5;margin-top:9px;color:#374151;">Кадастровые номера (${section.totalEntries}):</div>
+          <div style="margin-top:5px;display:flex;gap:20px;align-items:flex-start;font-family:Arial, Helvetica, sans-serif;">${cadastralColumnsHtml}</div>
+        </div>`
+
+        return { html: sectionHtml, isContinuation: section.continuation }
+      })
+
+      const measureRoot = document.createElement("div")
+      measureRoot.style.position = "fixed"
+      measureRoot.style.left = "-10000px"
+      measureRoot.style.top = "0"
+      measureRoot.style.width = "794px"
+      measureRoot.style.padding = "24px"
+      measureRoot.style.boxSizing = "border-box"
+      measureRoot.style.background = "#ffffff"
+      measureRoot.style.color = "#000000"
+      measureRoot.style.fontFamily = "Arial, Helvetica, sans-serif"
+      document.body.appendChild(measureRoot)
+
+      const measureHeight = (html: string) => {
+        measureRoot.innerHTML = html
+        return Math.ceil(measureRoot.scrollHeight)
+      }
+
+      const firstHeaderHeight = measureHeight(firstPageHeaderHtml)
+      const continuationHeaderHeight = measureHeight(continuationHeaderHtml)
+      const measuredSections = sectionHtmlItems.map((item) => ({
+        ...item,
+        height: measureHeight(item.html),
+      }))
+
+      const pages: Array<{ headerHtml: string; sectionsHtml: string[] }> = []
+      let currentPageSections: string[] = []
+      let currentHeight = firstHeaderHeight
+      let isFirstPage = true
+
+      for (const section of measuredSections) {
+        const headerHeight = isFirstPage ? firstHeaderHeight : continuationHeaderHeight
+        const nextHeight = currentHeight + section.height
+
+        if (nextHeight > pageContentMaxHeight && currentPageSections.length > 0) {
+          pages.push({
+            headerHtml: isFirstPage ? firstPageHeaderHtml : continuationHeaderHtml,
+            sectionsHtml: currentPageSections,
+          })
+          isFirstPage = false
+          currentPageSections = [section.html]
+          currentHeight = (isFirstPage ? firstHeaderHeight : continuationHeaderHeight) + section.height
+        } else {
+          currentPageSections.push(section.html)
+          currentHeight = nextHeight
+        }
+      }
+
+      if (currentPageSections.length > 0) {
+        pages.push({
+          headerHtml: isFirstPage ? firstPageHeaderHtml : continuationHeaderHtml,
+          sectionsHtml: currentPageSections,
+        })
+      }
+
+      document.body.removeChild(measureRoot)
+
+      let renderedPages = 0
+      for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+        const page = pages[pageIndex]
+        const pageRootMarker = `pdf-page-${pageIndex}`
+
+        const pageRoot = document.createElement("div")
+        pageRoot.style.position = "fixed"
+        pageRoot.style.left = "-10000px"
+        pageRoot.style.top = "0"
+        pageRoot.style.width = "794px"
+        pageRoot.style.background = "#ffffff"
+        pageRoot.style.color = "#000000"
+        pageRoot.style.fontFamily = "Arial, Helvetica, sans-serif"
+        pageRoot.style.padding = "24px"
+        pageRoot.style.boxSizing = "border-box"
+        pageRoot.style.zIndex = "-1"
+        pageRoot.setAttribute("data-pdf-page-root", pageRootMarker)
+        pageRoot.innerHTML = `${page.headerHtml}<div>${page.sectionsHtml.join("")}</div>`
+        document.body.appendChild(pageRoot)
+
+        const safeRenderOptions = {
+          useCORS: false,
           backgroundColor: "#ffffff",
           allowTaint: false,
-          onclone: (doc) => {
-            const root = doc.querySelector<HTMLElement>(".pdf-capture-root")
+          onclone: (doc: Document) => {
+            const root = doc.querySelector<HTMLElement>(`[data-pdf-page-root="${pageRootMarker}"]`)
             if (!root) return
 
-            // Remove global styles to avoid unsupported lab/oklch from Tailwind/shadcn.
-            // We'll rely on ProposalPDFView's own safe CSS and inline defaults.
-            doc.querySelectorAll('link[rel="stylesheet"], style:not([data-pdf-safe])').forEach((n) => n.remove())
+            doc.querySelectorAll('link[rel="stylesheet"], style').forEach((n) => n.remove())
 
-            // html2canvas doesn't support lab/oklab/oklch color functions.
-            // Some Tailwind/shadcn setups can emit those via CSS variables.
-            // Force safe colors inline in the cloned DOM so the parser never sees lab().
             const all = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))]
             for (const node of all) {
               node.style.color = "#000000"
@@ -1097,52 +1385,53 @@ export function AdminDashboard({
               node.style.boxShadow = "none"
               node.style.textShadow = "none"
               node.style.backgroundImage = "none"
-
-                // SVG colors (if any)
-                ; (node.style as unknown as { fill?: string }).fill = "#000000"
-                ; (node.style as unknown as { stroke?: string }).stroke = "#000000"
+              ;(node.style as unknown as { fill?: string }).fill = "#000000"
+              ;(node.style as unknown as { stroke?: string }).stroke = "#000000"
             }
           },
-          ignoreElements: ignoreImages
-            ? (node) => (node as HTMLElement)?.tagName?.toLowerCase?.() === "img"
-            : undefined,
-        })
+        }
 
-      let canvas: HTMLCanvasElement
-      try {
-        canvas = await renderCanvas(false)
-      } catch (e) {
-        // Most common reason: cross-origin images tainting canvas. Retry without images.
-        canvas = await renderCanvas(true)
+        let canvas: HTMLCanvasElement | null = null
+        try {
+          try {
+            canvas = await html2canvas(pageRoot, {
+              scale: 1.15,
+              ...safeRenderOptions,
+            })
+          } catch {
+            canvas = await html2canvas(pageRoot, {
+              scale: 1,
+              ...safeRenderOptions,
+            })
+          }
+        } catch (pageError) {
+          console.error("Failed to render PDF page:", pageError)
+        } finally {
+          document.body.removeChild(pageRoot)
+        }
+
+        if (!canvas) {
+          continue
+        }
+
+        const imgData = canvas.toDataURL("image/png")
+        const imgWidth = pageWidth
+        const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+        if (renderedPages > 0) {
+          pdf.addPage()
+        }
+
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight)
+        renderedPages += 1
+        await new Promise<void>((resolve) => setTimeout(() => resolve(), 0))
       }
 
-      const imgData = canvas.toDataURL("image/png")
-      const pdf = new jsPDF({
-        orientation: "p",
-        unit: "pt",
-        format: "a4",
-      })
-
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-
-      const imgWidth = pageWidth
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-      let heightLeft = imgHeight
-      let position = 0
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      while (heightLeft > 0) {
-        position -= pageHeight
-        pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
+      if (renderedPages === 0) {
+        throw new Error("PDF pages were not rendered")
       }
 
-      const safeTitle = (selectedProposal.title || "commercial-proposal")
+      const safeTitle = (proposalForPdf.title || "commercial-proposal")
         .replace(/[^a-zA-Z0-9а-яА-Я _-]+/g, "")
         .trim()
         .slice(0, 80)
@@ -1442,10 +1731,15 @@ export function AdminDashboard({
 
       case "proposals":
         return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold">Коммерческие предложения</h2>
-            <p className="text-muted-foreground">Управление КП доступно через раздел "Заявки"</p>
-          </div>
+          <UniversalProposalTool
+            plots={plots}
+            districts={districts}
+            loadingAddresses={loadingAddresses}
+            onLoadSettlements={getSettlementsByDistrictName}
+            onPreviewProposal={handlePreviewUniversalProposal}
+            onDownloadPdf={handleDownloadUniversalProposalPDF}
+            onSaveDraftToCRM={handleSaveProposalDraftToCRM}
+          />
         )
 
       case "news":
@@ -1710,7 +2004,8 @@ export function AdminDashboard({
         open={showProposalPreview && !!selectedProposal}
         onOpenChange={setShowProposalPreview}
         proposal={selectedProposal}
-        leadPhone={selectedLead?.phone || null}
+        leadName={proposalPreviewLeadName || selectedLead?.name || null}
+        leadPhone={proposalPreviewLeadPhone || selectedLead?.phone || null}
         onPrint={handleDownloadProposalPDF}
       />
     </AdminLayout>

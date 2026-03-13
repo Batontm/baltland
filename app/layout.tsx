@@ -19,7 +19,12 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s | БалтикЗемля"
     },
     description: "Продажа земельных участков в Калининградской области. Профессиональный подбор, юридическое сопровождение, честные цены.",
-    generator: "v0.app",
+    other: {
+      "geo.region": "RU-KGD",
+      "geo.placename": "Калининград",
+      "geo.position": "54.7104;20.4522",
+      "ICBM": "54.7104, 20.4522",
+    },
     alternates: {
       canonical: "./",
     },
@@ -186,6 +191,14 @@ export default async function RootLayout({
       "@id": `${baseUrl}/#organization`,
     },
     inLanguage: "ru-RU",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${baseUrl}/catalog?search={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
   }
 
   return (

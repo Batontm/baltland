@@ -9,12 +9,6 @@ interface ProposalPDFViewProps {
 
 export function ProposalPDFView({ proposal, settings }: ProposalPDFViewProps) {
   const plots = proposal.commercial_proposal_plots?.map((pp) => pp.plot) || []
-  const plotsBySettlement = plots.reduce<Record<string, typeof plots>>((acc, plot) => {
-    const key = plot.location || "(поселок не указан)"
-    if (!acc[key]) acc[key] = []
-    acc[key].push(plot)
-    return acc
-  }, {})
 
   return (
     <div className="pdf-root">
@@ -50,20 +44,23 @@ export function ProposalPDFView({ proposal, settings }: ProposalPDFViewProps) {
         <h2 className="pdf-h2">Подобранные участки ({plots.length})</h2>
 
         <div className="pdf-cards">
-          {Object.entries(plotsBySettlement).map(([settlement, groupPlots]) => {
-            const representative = groupPlots[0]
-            const cadastralNumbers = groupPlots
-              .map((p) => p.cadastral_number)
-              .filter(Boolean) as string[]
+          {plots.map((plot) => {
+            const settlement = plot.location || "(поселок не указан)"
+            const cadastralNumbers = [
+              ...(plot.cadastral_number ? [plot.cadastral_number] : []),
+              ...(plot.additional_cadastral_numbers || []),
+            ]
+            const uniqueCadastrals = Array.from(new Set(cadastralNumbers.filter(Boolean)))
+            const isBundle = uniqueCadastrals.length > 1
 
             return (
-              <div key={settlement} className="pdf-card">
+              <div key={plot.id} className="pdf-card">
                 <div className="pdf-card-row">
                   {/* Image */}
-                  {settings?.show_image !== false && representative?.image_url && (
+                  {settings?.show_image !== false && plot.image_url && (
                     <div className="pdf-image-wrap">
                       <img
-                        src={representative.image_url}
+                        src={plot.image_url}
                         alt={settlement}
                         className="pdf-image"
                       />
@@ -72,17 +69,18 @@ export function ProposalPDFView({ proposal, settings }: ProposalPDFViewProps) {
 
                   {/* Details */}
                   <div className="pdf-card-body">
-                    <h3 className="pdf-h3">{settlement}</h3>
-                    {representative?.description && (
-                      <p className="pdf-text-sm pdf-muted pdf-pre">{representative.description}</p>
+                    <h3 className="pdf-h3">{plot.title || settlement}</h3>
+                    <p className="pdf-text-sm pdf-muted">{plot.district || "Район не указан"} • {settlement}</p>
+                    {plot.description && (
+                      <p className="pdf-text-sm pdf-muted pdf-pre">{plot.description}</p>
                     )}
 
                     <div className="pdf-text-sm">
-                      <div className="pdf-muted pdf-mb-2">Кадастровые номера ({groupPlots.length})</div>
+                      <div className="pdf-muted pdf-mb-2">Кадастровые номера ({uniqueCadastrals.length})</div>
                       {settings?.show_cadastral_number !== false ? (
-                        cadastralNumbers.length > 0 ? (
+                        uniqueCadastrals.length > 0 ? (
                           <div className="pdf-cn-grid">
-                            {cadastralNumbers.map((cn) => (
+                            {uniqueCadastrals.map((cn) => (
                               <div key={cn}>{cn}</div>
                             ))}
                           </div>
@@ -91,6 +89,11 @@ export function ProposalPDFView({ proposal, settings }: ProposalPDFViewProps) {
                         )
                       ) : (
                         <div className="pdf-muted">Кадастровые номера скрыты настройками</div>
+                      )}
+                      {isBundle && (
+                        <div className="pdf-bundle-note">
+                          Участок в составе лота: кадастровые номера продаются вместе.
+                        </div>
                       )}
                     </div>
                   </div>
@@ -224,6 +227,12 @@ export function ProposalPDFView({ proposal, settings }: ProposalPDFViewProps) {
           text-align: center;
           font-size: 12px;
           color: #6b7280;
+        }
+        .pdf-bundle-note {
+          margin-top: 8px;
+          color: #92400e;
+          font-size: 12px;
+          font-weight: 600;
         }
         @media print {
           body {

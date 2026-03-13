@@ -1039,17 +1039,22 @@ export async function createLead(data: {
   lead_type?: "general" | "faq";
 }): Promise<{
   success: boolean
+  lead?: Lead
   error?: string
 }> {
   const supabase = createAdminClient()
 
-  const { error } = await supabase.from("leads").insert({
-    name: data.name,
-    phone: data.phone,
-    wishes: data.wishes || null,
-    lead_type: data.lead_type || "general",
-    status: "new",
-  })
+  const { data: createdLead, error } = await supabase
+    .from("leads")
+    .insert({
+      name: data.name,
+      phone: data.phone,
+      wishes: data.wishes || null,
+      lead_type: data.lead_type || "general",
+      status: "new",
+    })
+    .select()
+    .single()
 
   if (error) {
     console.error("Error creating lead:", error)
@@ -1058,13 +1063,17 @@ export async function createLead(data: {
 
   // Telegram уведомление
   const typeText = data.lead_type === "faq" ? "Вопрос из FAQ" : "Новая заявка"
-  await sendMessageToAdmin(`🔔 <b>${typeText}!</b>
+  try {
+    await sendMessageToAdmin(`🔔 <b>${typeText}!</b>
 
 👤 <b>Имя:</b> ${data.name}
 📞 <b>Телефон:</b> ${data.phone}${data.wishes ? `\n💬 ${data.lead_type === 'faq' ? 'Вопрос' : 'Пожелания'}: ${data.wishes}` : ''}`, data.lead_type === 'faq' ? 'faq' : 'leads')
+  } catch (telegramError) {
+    console.error("Telegram notification failed for createLead:", telegramError)
+  }
 
   revalidatePath("/admin")
-  return { success: true }
+  return { success: true, lead: createdLead as Lead }
 }
 
 export async function getLeads(): Promise<Lead[]> {
@@ -1522,16 +1531,20 @@ export async function createProposal(data: {
         sort_order: index,
       }))
 
-      const { data: insertedPlots, error: plotsError } = await supabase
-        .from("commercial_proposal_plots")
-        .insert(proposalPlots)
-        .select()
+      const CHUNK_SIZE = 200
+      for (let i = 0; i < proposalPlots.length; i += CHUNK_SIZE) {
+        const chunk = proposalPlots.slice(i, i + CHUNK_SIZE)
+        const { error: plotsError } = await supabase
+          .from("commercial_proposal_plots")
+          .insert(chunk)
 
-      if (plotsError) {
-        console.error("Error adding plots to proposal:", plotsError)
-        // Rollback - delete the proposal
-        await supabase.from("commercial_proposals").delete().eq("id", proposal.id)
-        return { success: false, error: "Ошибка добавления участков в КП" }
+        if (plotsError) {
+          console.error("Error adding plots to proposal:", plotsError)
+          // Rollback - delete inserted rows + proposal
+          await supabase.from("commercial_proposal_plots").delete().eq("proposal_id", proposal.id)
+          await supabase.from("commercial_proposals").delete().eq("id", proposal.id)
+          return { success: false, error: "Ошибка добавления участков в КП" }
+        }
       }
     }
 

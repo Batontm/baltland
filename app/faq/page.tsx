@@ -104,8 +104,8 @@ export default async function FaqPage() {
                                                     <AccordionTrigger className="px-6 hover:bg-slate-50 transition-all text-left font-medium text-slate-700 decoration-0">
                                                         {item.question}
                                                     </AccordionTrigger>
-                                                    <AccordionContent className="px-6 pb-4 pt-0 text-slate-600 leading-relaxed whitespace-pre-line">
-                                                        {item.answer}
+                                                    <AccordionContent className="px-6 pb-4 pt-0 text-slate-600 leading-relaxed whitespace-pre-line [&_a]:text-primary [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-primary/80">
+                                                        <div dangerouslySetInnerHTML={{ __html: item.answer }} />
                                                     </AccordionContent>
                                                 </AccordionItem>
                                             ))}

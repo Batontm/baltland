@@ -73,6 +73,26 @@ Entrypoint для Next.js middleware. Делегирует выполнение 
 - Логин и пароль по умолчанию
 - Инструкции по восстановлению доступа
 
+### `MAP_CLUSTERING.md` (Март 2026)
+Информационный файл по кластеризации карты:
+- Где используется текущая кластеризация (`LeafletCatalogMap`)
+- Как работают уровни зума (кластеры → маркеры → полигоны)
+- Параметры `MarkerClusterGroup` и кастомная SVG-иконка кластера
+- Оптимизации производительности и чек-лист для изменения поведения
+
+### `MAX_BOT_PLAN.md` (Март 2026)
+План реализации чат-бота в MAX:
+- Ограничения платформы и onboarding (юрлицо РФ, верификация, модерация)
+- Архитектура интеграции в текущий Next.js проект
+- Пошаговые фазы реализации (MVP поиск участков, заявки, расширения)
+- Риски, сроки и чек-листы запуска
+
+### `kupiprodai-plots.xml` (Март 2026)
+XML-выгрузка выбранных участков для публикации на внешней площадке:
+- Формат: `<rows><row>...</row></rows>`
+- Контакты в выгрузке фиксированы под задачу (имя/телефон)
+- Данные участков и описания берутся из `land_plots`, изображение — из `image_url`/`land_plot_images`
+
 ---
 
 ## 📂 Директория `app/` - Next.js App Router
@@ -356,6 +376,13 @@ Entrypoint для Next.js middleware. Делегирует выполнение 
 - GET: получение шаблонов уведомлений
 - POST: сохранение шаблонов с переменными ({name}, {phone}, {cadastral})
 
+#### `app/api/admin/max/webhook/route.ts` (Март 2026)
+**GET/POST/DELETE API управления webhook MAX**:
+- GET: получение текущих подписок бота (`/subscriptions`)
+- POST: установка webhook (`https://.../api/max-bot/webhook`) и `update_types`
+- DELETE: удаление webhook подписки
+- Авторизация к MAX API через заголовок `Authorization: <MAX_BOT_TOKEN>`
+
 #### `app/api/telegram/webhook/route.ts`
 **POST API обработки входящих сообщений от Telegram**:
 - Обработка команд: `/search`, `/plot`, `/stats`, `/help`
@@ -363,6 +390,13 @@ Entrypoint для Next.js middleware. Делегирует выполнение 
 - Поиск участков по локации
 - Детальная информация об участке (КП)
 - Отметка заявки как обработанной
+
+#### `app/api/max-bot/webhook/route.ts` (Март 2026)
+**POST API обработки входящих событий от MAX**:
+- Принимает webhook payload от MAX
+- Нормализует входящее событие через `lib/max-bot/index.ts`
+- Обрабатывает команды `/start`, `/help`, `/search`
+- Запускает flow поиска участков с пагинацией и детальной карточкой
 
 #### `app/api/indexnow/route.ts` (Февраль 2026)
 **POST API для IndexNow (Яндекс)**:
@@ -591,6 +625,7 @@ Entrypoint для Next.js middleware. Делегирует выполнение 
 - `components/admin/dashboard/odnoklassniki-tab.tsx` - управление публикациями Одноклассники
 - `components/admin/dashboard/news-parser-widget.tsx`
 - `components/admin/dashboard/proposals/` - Компоненты коммерческих предложений (диалоги/превью)
+- `components/admin/dashboard/proposals/universal-proposal-tool.tsx` - универсальный конструктор КП в разделе «Недвижимость» с расширенными фильтрами подбора, предпросмотром/PDF, сохранением черновика в CRM, кнопкой «Выбрать все участки», исключением нулевой цены и корректной обработкой лотов (primary + все кадастры в КП)
 
 #### `components/admin/admin-login-form.tsx`
 **Форма входа в админ-панель**:
@@ -935,6 +970,18 @@ Entrypoint для Next.js middleware. Делегирует выполнение 
 - `uploadPhotoToGroup(imageBuffer)` - загрузка фото в альбом группы OK.
 - `calculateSignature(params, secret)` - расчет подписи запроса по алгоритмам OK.
 - `OKRateLimiter` - ограничение частоты запросов.
+
+#### `lib/max-bot/` (Март 2026)
+**Модуль MAX-бота (Фаза 1, MVP):**
+- `index.ts` — инициализация `@maxhub/max-bot-api` и маршрутизация входящих событий
+- `state.ts` — in-memory сессии пользователя (шаги фильтрации, выбранные фильтры, страница)
+- `handlers/start.ts` — приветствие и запуск сценария поиска
+- `handlers/search.ts` — выбор района, поиск в БД, пагинация, команда `/plot`
+- `handlers/plot-detail.ts` — отправка детальной карточки участка
+- `utils/db-query.ts` — запросы к `land_plots` через Supabase admin client
+- `utils/format-plot.ts` — форматирование карточки и деталей участка
+- `utils/keyboards.ts` — описание кнопок/клавиатур сценария
+- `utils/max-api.ts` — отправка сообщений в MAX через `platform-api.max.ru`
 
 #### `lib/types.ts`
 **TypeScript типы** для всего проекта:
@@ -1593,6 +1640,7 @@ users (1) ──< (N) leads (assigned_to)
 
 **Скрипты**:
 - `scripts/014-clear-land-plots.sql` - полная очистка таблицы `land_plots` (с каскадным удалением зависимостей)
+- `scripts/generate-kupiprodai-xml.ts` - формирует файл `kupiprodai-plots.xml` по заданному списку кадастровых номеров (с fallback на `land_plot_images` для картинок)
 
 ---
 

@@ -53,12 +53,16 @@ export function Footer() {
 
   const links = {
     collections: [
-      { label: "Недорогие участки (до 500 тыс.)", href: "/catalog?maxPrice=500000" },
-      { label: "Участки под ИЖС", href: "/catalog?landStatus=ИЖС" },
-      { label: "Рядом с городом", href: "/catalog?district=Гурьевский" },
-      { label: "Участки с коммуникациями", href: "/catalog?utilities=full" },
-      { label: "Новинки месяца", href: "/catalog?isNew=true" },
-      { label: "Участки в рассрочку", href: "/catalog?installment=yes" },
+      { label: "Участки ИЖС", href: "/catalog/izhs" },
+      { label: "Участки у моря", href: "/catalog/sea" },
+      { label: "Недорогие участки", href: "/catalog/do500" },
+      { label: "Участки до 1 млн ₽", href: "/catalog/do1m" },
+      { label: "С коммуникациями", href: "/catalog/kommunikacii" },
+      { label: "В рассрочку", href: "/catalog/rassrochka" },
+      { label: "Зеленоградск", href: "/catalog/zelenogradsk" },
+      { label: "Светлогорск", href: "/catalog/svetlogorsk" },
+      { label: "ИЖС у моря", href: "/catalog/izhs-more" },
+      { label: "Дачи у моря", href: "/catalog/dacha-more" },
     ],
     company: [
       { label: "О компании", href: "/about" },
@@ -197,7 +201,7 @@ export function Footer() {
 
           <div>
             <h4 className="font-semibold mb-5">Популярные подборки</h4>
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-2 gap-x-6 gap-y-3">
               {links.collections.map((link) => (
                 <li key={link.label}>
                   <Link href={link.href} className="text-sm text-background/60 hover:text-background transition-colors">

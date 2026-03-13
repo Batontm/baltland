@@ -92,6 +92,7 @@ const menuGroups: MenuGroup[] = [
         icon: <Home className="h-4 w-4" />,
         items: [
             { id: "plots", label: "Участки", icon: <TreePine className="h-4 w-4" /> },
+            { id: "proposals", label: "Коммерческие предложения", icon: <FileText className="h-4 w-4" /> },
             { id: "social-networks", label: "Публикации", icon: <Send className="h-4 w-4" /> },
             { id: "map", label: "Карта", icon: <Share2 className="h-4 w-4" /> },
             { id: "nspd", label: "НСПД", icon: <ShieldCheck className="h-4 w-4" /> },

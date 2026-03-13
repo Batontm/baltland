@@ -2,10 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { createPortal } from "react-dom"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { buildPlotSeoPath, buildPlotSlug } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -166,6 +165,7 @@ interface InitialFilters {
   installment?: string
   utilities?: string
   district?: string
+  districts?: string[]
   settlement?: string
   maxDistanceToSea?: number
   isNew?: string // "true" or "false"
@@ -176,14 +176,23 @@ interface CatalogWithFiltersProps {
   initialPlots: LandPlot[]
   initialFilters?: InitialFilters
   mapSettings?: MapSettings | null
+  initialItemsPerPage?: number
+  initialViewMode?: "grid" | "list"
 }
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat("ru-RU").format(price) + " ₽"
 }
 
-export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }: CatalogWithFiltersProps) {
+export function CatalogWithFilters({
+  initialPlots,
+  initialFilters,
+  mapSettings,
+  initialItemsPerPage,
+  initialViewMode,
+}: CatalogWithFiltersProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const [selectedPlot, setSelectedPlot] = useState<LandPlot | null>(null)
   const [isMapOpen, setIsMapOpen] = useState(false)
   const [isFullMapOpen, setIsFullMapOpen] = useState(false)
@@ -281,11 +290,11 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
     return Math.min(...plotsWithPrice.map((plot) => plot.price))
   }, [visiblePlots])
 
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [viewMode, setViewMode] = useState<"grid" | "list">(initialViewMode || "grid")
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   const [currentPage, setCurrentPage] = useState(initialFilters?.page || 1)
-  const [itemsPerPage, setItemsPerPage] = useState(12)
+  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage || 12)
 
   // Filter states
   const [district, setDistrict] = useState("")
@@ -301,6 +310,12 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
 
   const [pdFilters, setPdFilters] = useState<{ budget: string | null; distance: string | null; amenities: string[] } | null>(null)
   const [isPdOpen, setIsPdOpen] = useState(false)
+
+  const seoDistrictTokens = useMemo(() => {
+    return (initialFilters?.districts || [])
+      .map((name) => String(name).trim().toLowerCase().split(" ")[0])
+      .filter(Boolean)
+  }, [initialFilters?.districts])
 
   // Apply initial filters from URL on mount
   useEffect(() => {
@@ -332,6 +347,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
         initialFilters.installment ||
         initialFilters.utilities ||
         initialFilters.district ||
+        (Array.isArray(initialFilters.districts) && initialFilters.districts.length > 0) ||
         initialFilters.settlement ||
         typeof initialFilters.maxDistanceToSea === "number" ||
         initialFilters.isNew
@@ -550,6 +566,11 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
   // Filtered plots
   const filteredPlots = useMemo(() => {
     return visiblePlots.filter((plot) => {
+      if (seoDistrictTokens.length > 0) {
+        const plotDistrictToken = String(plot.district || "").trim().toLowerCase().split(" ")[0]
+        if (!plotDistrictToken || !seoDistrictTokens.includes(plotDistrictToken)) return false
+      }
+
       // District filter - use includes for partial match (e.g. "Гурьевский р-н" matches "Гурьевский")
       if (district && !plot.district?.toLowerCase().includes(district.split(' ')[0].toLowerCase())) return false
 
@@ -588,7 +609,7 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
 
       return true
     })
-  }, [visiblePlots, district, settlement, priceRange, landStatus, communications, installment, maxDistanceToSea, isNew])
+  }, [visiblePlots, seoDistrictTokens, district, settlement, priceRange, landStatus, communications, installment, maxDistanceToSea, isNew])
 
   const filteredLotsCount = useMemo(() => countLots(filteredPlots), [filteredPlots])
 
@@ -697,8 +718,8 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
       params.set("page", page.toString())
     }
     const qs = params.toString()
-    return `/catalog${qs ? `?${qs}` : ""}`
-  }, [searchParams])
+    return `${pathname}${qs ? `?${qs}` : ""}`
+  }, [pathname, searchParams])
 
   const totalPages = Math.ceil(filteredPlots.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -1572,6 +1593,8 @@ export function CatalogWithFilters({ initialPlots, initialFilters, mapSettings }
                       <SelectItem value="6">6</SelectItem>
                       <SelectItem value="9">9</SelectItem>
                       <SelectItem value="12">12</SelectItem>
+                      <SelectItem value="24">24</SelectItem>
+                      <SelectItem value="36">36</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

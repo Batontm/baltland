@@ -41,9 +41,9 @@ async function resolveHierarchy(slugs: string[]): Promise<SeoCatalogPageConfig |
     // 1. Root catalog
     if (slugs.length === 0) {
         return {
-            title: "Каталог земельных участков в Калининградской области",
-            description: "Каталог земельных участков в Калининградской области. Подбор по назначению, цене и коммуникациям.",
-            h1: "Каталог участков",
+            title: "Каталог участков в Калининградской области — цены, районы, ИЖС | BaltLand",
+            description: "Каталог земельных участков в Калининградской области. ИЖС, СНТ, ЛПХ — подбор по цене, району, коммуникациям и назначению земли.",
+            h1: "Каталог земельных участков в Калининградской области",
             filter: {}
         }
     }
@@ -117,7 +117,8 @@ export async function generateMetadata({ params }: CatalogPageProps): Promise<Me
 
     const baseUrl = "https://baltland.ru"
     const slugPath = p.slug?.join("/") || ""
-    const canonical = `${baseUrl}/catalog${slugPath ? `/${slugPath}` : ""}`
+    const canonicalPath = config.canonicalSlug || slugPath
+    const canonical = `${baseUrl}/catalog${canonicalPath ? `/${canonicalPath}` : ""}`
 
     return {
         title: config.title,
@@ -242,6 +243,8 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
                     initialPlots={(plots as LandPlot[]) || []}
                     initialFilters={initialFilters}
                     mapSettings={mapSettings}
+                    initialItemsPerPage={config.initialItemsPerPage}
+                    initialViewMode={config.initialViewMode}
                 />
             </div>
 
