@@ -258,7 +258,7 @@ const TILE_LAYERS = {
         attribution: "Tiles &copy; Esri",
     },
     scheme: {
-        url: "/api/map-tiles/{z}/{x}/{y}",
+        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     },
 }

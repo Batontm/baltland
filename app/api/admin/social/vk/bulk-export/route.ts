@@ -19,28 +19,39 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const { filters = {}, batchSize = 50 } = body
 
-        // Build query for plots
-        let query = supabase
+        // Build queries for publishable plots: standalone + primary bundle
+        let standaloneQuery = supabase
             .from("land_plots")
-            .select("id", { count: "exact" })
-            .eq("status", "active")
-            .is("bundle_id", null) // Only primary plots
+            .select("id")
+            .eq("is_active", true)
+            .is("bundle_id", null)
+
+        let bundleQuery = supabase
+            .from("land_plots")
+            .select("id")
+            .eq("is_active", true)
+            .not("bundle_id", "is", null)
+            .eq("is_bundle_primary", true)
 
         // Apply filters
         if (filters.district) {
-            query = query.eq("district", filters.district)
+            standaloneQuery = standaloneQuery.eq("district", filters.district)
+            bundleQuery = bundleQuery.eq("district", filters.district)
         }
         if (filters.location) {
-            query = query.eq("location", filters.location)
+            standaloneQuery = standaloneQuery.eq("location", filters.location)
+            bundleQuery = bundleQuery.eq("location", filters.location)
         }
 
-        const { count, error: countError } = await query
+        const [standaloneRes, bundleRes] = await Promise.all([standaloneQuery, bundleQuery])
 
-        if (countError) {
-            return NextResponse.json({ error: countError.message }, { status: 500 })
+        if (standaloneRes.error || bundleRes.error) {
+            const errMsg = (standaloneRes.error || bundleRes.error)!.message
+            return NextResponse.json({ error: errMsg }, { status: 500 })
         }
 
-        const totalCount = count || 0
+        const allPlots = [...(standaloneRes.data || []), ...(bundleRes.data || [])]
+        const totalCount = allPlots.length
 
         if (totalCount === 0) {
             return NextResponse.json({ error: "No plots found to export" }, { status: 400 })
@@ -55,28 +66,8 @@ export async function POST(request: NextRequest) {
 
         const publishedIds = new Set((publishedPlots || []).map(p => p.plot_id))
 
-        // Get all plot IDs to export
-        let plotsQuery = supabase
-            .from("land_plots")
-            .select("id")
-            .eq("status", "active")
-            .is("bundle_id", null)
-
-        if (filters.district) {
-            plotsQuery = plotsQuery.eq("district", filters.district)
-        }
-        if (filters.location) {
-            plotsQuery = plotsQuery.eq("location", filters.location)
-        }
-
-        const { data: allPlots, error: plotsError } = await plotsQuery
-
-        if (plotsError) {
-            return NextResponse.json({ error: plotsError.message }, { status: 500 })
-        }
-
         // Filter out already published
-        const plotsToExport = (allPlots || []).filter(p => !publishedIds.has(p.id))
+        const plotsToExport = allPlots.filter(p => !publishedIds.has(p.id))
 
         if (plotsToExport.length === 0) {
             return NextResponse.json({

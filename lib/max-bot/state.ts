@@ -1,7 +1,8 @@
-type SearchStep = "idle" | "district" | "results"
+type SearchStep = "idle" | "district" | "settlement" | "results"
 
 export interface MaxBotFilters {
   district?: string
+  settlement?: string
   landStatus?: string
   maxPrice?: number
   installment?: boolean

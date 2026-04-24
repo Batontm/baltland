@@ -7,12 +7,17 @@ export async function GET() {
 
     try {
         // Get counts for VK and OK
+        // Count publishable plots: standalone (no bundle_id) + primary bundle plots
         const [
-            totalPlotsRes,
+            standalonePlotsRes,
+            bundlePrimaryPlotsRes,
             vkPublishedRes, vkErrorsRes, vkDeletedRes,
             okPublishedRes, okErrorsRes, okDeletedRes
         ] = await Promise.all([
-            supabase.from('land_plots').select('*', { count: 'exact', head: true }).eq('is_active', true),
+            supabase.from('land_plots').select('*', { count: 'exact', head: true })
+                .eq('is_active', true).is('bundle_id', null),
+            supabase.from('land_plots').select('*', { count: 'exact', head: true })
+                .eq('is_active', true).not('bundle_id', 'is', null).eq('is_bundle_primary', true),
             // VK stats
             supabase.from('social_posts').select('*', { count: 'exact', head: true })
                 .eq('platform', 'vk').eq('status', 'published'),
@@ -29,7 +34,7 @@ export async function GET() {
                 .eq('platform', 'ok').eq('status', 'deleted')
         ])
 
-        const total = totalPlotsRes.count || 0
+        const total = (standalonePlotsRes.count || 0) + (bundlePrimaryPlotsRes.count || 0)
         const vkPublished = vkPublishedRes.count || 0
         const okPublished = okPublishedRes.count || 0
 

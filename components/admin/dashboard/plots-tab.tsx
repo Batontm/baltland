@@ -645,12 +645,20 @@ export function PlotsTab({
                           className="w-full h-full object-cover"
                           loading="lazy"
                           decoding="async"
+                          onError={(e) => {
+                            const target = e.currentTarget
+                            target.style.display = "none"
+                            const fallback = target.nextElementSibling as HTMLElement | null
+                            if (fallback) fallback.style.display = "flex"
+                          }}
                         />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <TreePine className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
+                      ) : null}
+                      <div
+                        className="w-full h-full items-center justify-center"
+                        style={{ display: plot.image_url ? "none" : "flex" }}
+                      >
+                        <TreePine className="h-8 w-8 text-muted-foreground" />
+                      </div>
                     </div>
                     <CardContent className="flex-1 p-4">
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -1080,6 +1088,16 @@ function PlotFullEditor({
         )}
       </div>
 
+      <div className="space-y-2">
+        <Label>Описание участка</Label>
+        <Textarea
+          value={plotFormData.description || ""}
+          onChange={(e) => onChangeForm({ description: e.target.value })}
+          placeholder="Описание участка..."
+          className="rounded-xl min-h-[200px] text-sm leading-relaxed"
+        />
+      </div>
+
       {/* Additional Cadastral Numbers - separate input fields */}
       {!hideCadastralInput && !isBundleMode && (
         <div className="space-y-3">
@@ -1365,16 +1383,6 @@ function PlotFullEditor({
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label>Описание</Label>
-        <Textarea
-          value={plotFormData.description || ""}
-          onChange={(e) => onChangeForm({ description: e.target.value })}
-          placeholder="Описание участка..."
-          className="rounded-xl min-h-[120px]"
-        />
-      </div>
-
       <div className="space-y-4">
         <Label className="text-base font-semibold">Настройки и Коммуникации</Label>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -1620,7 +1628,22 @@ function PlotPhotosManager({ plotId, plotTitle, onChanged }: { plotId: string, p
             }}
             title="Перетащите, чтобы изменить порядок"
           >
-            <img src={img.public_url} alt="" className="w-full h-24 object-cover" />
+            <img
+              src={img.public_url}
+              alt=""
+              className="w-full h-24 object-cover"
+              onError={(e) => {
+                const target = e.currentTarget
+                target.style.display = "none"
+                const parent = target.parentElement
+                if (parent) {
+                  const placeholder = document.createElement("div")
+                  placeholder.className = "w-full h-24 flex items-center justify-center bg-red-50 text-red-400 text-xs"
+                  placeholder.textContent = "Изображение недоступно"
+                  parent.insertBefore(placeholder, target)
+                }
+              }}
+            />
             {img.is_cover && (
               <div className="absolute top-1 left-1 bg-amber-500 text-white p-1 rounded-full">
                 <Star className="h-3 w-3 fill-current" />

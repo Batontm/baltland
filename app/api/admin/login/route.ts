@@ -1,10 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import bcrypt from "bcryptjs"
-import { sendMessageToAdmin, sendMessageToChat } from "@/lib/telegram"
+import { sendMessageToAdmin } from "@/lib/telegram"
+import { sendMagicLinkEmail } from "@/lib/email"
 import crypto from "crypto"
-
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ""
 
 type FailureKey = string
 
@@ -122,49 +121,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Неверный логин или пароль" }, { status: 401 })
     }
 
-    // Step 1 passed: password is valid. Require Telegram link + OTP.
-    const telegramChatId = String((user as any)?.telegram_chat_id || "").trim()
-
-    if (!telegramChatId) {
-      const code = crypto.randomBytes(4).toString("hex").toUpperCase()
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 min
-
-      await supabase.from("admin_telegram_link_codes").insert({
-        admin_user_id: user.id,
-        code,
-        expires_at: expiresAt,
-      })
-
-      return NextResponse.json({
-        success: false,
-        requires_link: true,
-        link_code: code,
-        error: "Telegram не привязан",
-      })
-    }
-
-    const otpCode = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0")
-    const otpHash = await bcrypt.hash(otpCode, 10)
-    const otpToken = crypto.randomBytes(24).toString("base64url")
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 min
+    // Step 1 passed: password is valid. Send magic link via email.
+    const magicToken = crypto.randomBytes(32).toString("base64url")
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 min
 
     await supabase.from("admin_login_otps").insert({
       admin_user_id: user.id,
-      otp_token: otpToken,
-      otp_hash: otpHash,
+      otp_token: magicToken,
+      otp_hash: "magic_link",
       expires_at: expiresAt,
     })
 
-    await sendMessageToChat(
-      telegramChatId,
-      `🔐 <b>Код входа в админку</b>\n\n<code>${otpCode}</code>\n\nКод действует 5 минут.`,
-      TELEGRAM_BOT_TOKEN
-    )
+    try {
+      await sendMagicLinkEmail(magicToken)
+      console.log("[v0] Magic link email sent successfully")
+    } catch (emailError) {
+      console.error("[v0] Failed to send magic link email:", emailError)
+      return NextResponse.json({ success: false, error: "Не удалось отправить письмо" }, { status: 500 })
+    }
 
     return NextResponse.json({
       success: true,
-      requires_otp: true,
-      otp_token: otpToken,
+      requires_magic_link: true,
     })
   } catch (error) {
     console.error("[v0] Login API error:", error)

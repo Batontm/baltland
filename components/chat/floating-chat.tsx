@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import { MessageCircle, X, Send, Loader2, Paperclip, Smile } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { createClient } from "@/lib/supabase/client"
 import { getChatMessages, getOrganizationSettings } from "@/app/actions"
 import { cn } from "@/lib/utils"
 import type { OrganizationSettings } from "@/lib/types"
@@ -52,8 +51,6 @@ export function FloatingChat() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
-    const supabase = createClient()
-
     // Initialize session and load history
     useEffect(() => {
         const existingId = localStorage.getItem("rkk_chat_session_id")
@@ -81,29 +78,7 @@ export function FloatingChat() {
 
         fetchSettingsAndHistory()
 
-        // Subscribe to new messages
-        const channel = supabase
-            .channel(`chat:${id}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "INSERT",
-                    schema: "public",
-                    table: "chat_messages",
-                    filter: `session_id=eq.${id}`,
-                },
-                (payload: { new: Message }) => {
-                    const newMessage = payload.new
-                    setMessages((prev) => {
-                        // Avoid duplicate messages (e.g. if we get payload for our own sent message)
-                        if (prev.find((m) => m.id === newMessage.id)) return prev
-                        return [...prev, newMessage]
-                    })
-                }
-            )
-            .subscribe()
-
-        // Polling fallback (in case Realtime is not enabled or fails)
+        // Poll for new messages
         const POLL_INTERVAL_MS = 2500
         const interval = setInterval(async () => {
             try {
@@ -124,10 +99,9 @@ export function FloatingChat() {
         }, POLL_INTERVAL_MS)
 
         return () => {
-            supabase.removeChannel(channel)
             clearInterval(interval)
         }
-    }, [supabase])
+    }, [])
 
     // Scroll to bottom when messages change
     useEffect(() => {

@@ -181,6 +181,11 @@ export async function deleteWallPost(postId: number): Promise<boolean> {
     return true
 }
 
+export interface BundleMemberInfo {
+    cadastral_number: string
+    area_sotok: number
+}
+
 /**
  * Format plot data for VK post
  */
@@ -196,10 +201,18 @@ export function formatPlotPost(plot: {
     has_water?: boolean
     id: string
     int_id?: number
+    bundleMembers?: BundleMemberInfo[]
+    bundleTotalArea?: number
+    bundleCount?: number
 }): string {
     const location = plot.location || plot.district || ""
-    // Construct specific title for VK: "Участок [площадь] сот. [поселок]"
-    const title = `Участок ${plot.area_sotok || 0} сот. ${location}`.trim()
+    const isBundle = plot.bundleMembers && plot.bundleCount && plot.bundleCount > 1
+    const totalArea = isBundle ? (plot.bundleTotalArea || plot.area_sotok || 0) : (plot.area_sotok || 0)
+
+    // Construct title
+    const title = isBundle
+        ? `Участок ${totalArea} сот. (${plot.bundleCount} участка) ${location}`.trim()
+        : `Участок ${totalArea} сот. ${location}`.trim()
 
     // Format price
     const price = plot.price
@@ -215,7 +228,6 @@ export function formatPlotPost(plot: {
     // Hashtags
     const hashtags = ["#земля", "#участок", "#калининград"]
     if (location) {
-        // Sanitize location for hashtag
         const locationTag = location
             .toLowerCase()
             .replace(/пос\.|п\.|\s+/g, "")
@@ -234,18 +246,33 @@ export function formatPlotPost(plot: {
     const lines = [
         `🏡 ${title}`,
         "",
-        plot.cadastral_number ? `📍 Кадастровый номер: ${plot.cadastral_number}` : "",
-        `📐 Площадь: ${plot.area_sotok || 0} соток`,
-        `💰 Цена: ${price} ₽`,
-        "",
-        utilities.length ? utilities.join(" | ") : "",
-        "",
-        `🔗 Подробнее: ${url}`,
-        "",
-        hashtags.join(" "),
     ]
 
-    return lines.filter(Boolean).join("\n")
+    if (isBundle && plot.bundleMembers) {
+        lines.push(`📦 Продажа одним лотом: ${plot.bundleCount} участка`)
+        lines.push(`📐 Общая площадь: ${totalArea} соток`)
+        lines.push("")
+        lines.push("Кадастровые номера:")
+        for (const m of plot.bundleMembers) {
+            lines.push(`  • КН ${m.cadastral_number} — ${m.area_sotok} сот.`)
+        }
+        lines.push("")
+    } else {
+        if (plot.cadastral_number) lines.push(`📍 Кадастровый номер: ${plot.cadastral_number}`)
+        lines.push(`📐 Площадь: ${totalArea} соток`)
+    }
+
+    lines.push(`💰 Цена: ${price} ₽`)
+    lines.push("")
+    if (utilities.length) {
+        lines.push(utilities.join(" | "))
+        lines.push("")
+    }
+    lines.push(`🔗 Подробнее: ${url}`)
+    lines.push("")
+    lines.push(hashtags.join(" "))
+
+    return lines.filter((l) => l !== undefined).join("\n")
 }
 
 /**
@@ -263,6 +290,9 @@ export async function publishPlotToVK(plot: {
     has_electricity?: boolean
     has_water?: boolean
     image_url?: string
+    bundleMembers?: BundleMemberInfo[]
+    bundleTotalArea?: number
+    bundleCount?: number
 }): Promise<{ postId: number; url: string }> {
     const message = formatPlotPost(plot)
 

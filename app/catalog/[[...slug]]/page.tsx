@@ -166,7 +166,6 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
         landStatus: sParams.landStatus || config.filter?.landStatus,
         installment: sParams.installment || config.filter?.installment,
         utilities: sParams.utilities || config.filter?.utilities,
-        isNew: sParams.isNew || undefined,
         page: sParams.page ? parseInt(sParams.page, 10) : undefined,
     }
 

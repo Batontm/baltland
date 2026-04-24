@@ -22,9 +22,10 @@ export async function POST(request: NextRequest) {
         const publishedIds = new Set((publishedPosts || []).map(p => p.plot_id).filter(Boolean))
 
         // Get active plots not yet published
+        // Include: standalone plots (no bundle_id) + primary bundle plots
         const actualLimit = publishAll ? 500 : limit
 
-        const { data: plots, error } = await supabase
+        const { data: standalonePlots, error: err1 } = await supabase
             .from('land_plots')
             .select('*')
             .eq('is_active', true)
@@ -32,12 +33,24 @@ export async function POST(request: NextRequest) {
             .order('created_at', { ascending: false })
             .limit(actualLimit + publishedIds.size)
 
-        if (error) {
-            console.error('[VK Bulk Publish] DB Error:', error)
-            return NextResponse.json({ error: 'Failed to fetch plots: ' + error.message }, { status: 500 })
+        const { data: bundlePrimaryPlots, error: err2 } = await supabase
+            .from('land_plots')
+            .select('*')
+            .eq('is_active', true)
+            .not('bundle_id', 'is', null)
+            .eq('is_bundle_primary', true)
+            .order('created_at', { ascending: false })
+            .limit(actualLimit + publishedIds.size)
+
+        if (err1 || err2) {
+            const errMsg = (err1 || err2)!.message
+            console.error('[VK Bulk Publish] DB Error:', errMsg)
+            return NextResponse.json({ error: 'Failed to fetch plots: ' + errMsg }, { status: 500 })
         }
 
-        if (!plots || plots.length === 0) {
+        const plots = [...(standalonePlots || []), ...(bundlePrimaryPlots || [])]
+
+        if (plots.length === 0) {
             return NextResponse.json({ error: 'No plots found in database' }, { status: 404 })
         }
 
@@ -68,12 +81,31 @@ export async function POST(request: NextRequest) {
                     ? (imageSource.startsWith("http") ? imageSource : `${baseUrl}${imageSource}`)
                     : undefined
 
-                const plotToPublish = {
+                const plotToPublish: Record<string, any> = {
                     ...plot,
                     image_url: imageUrl
                 }
 
-                const result = await publishPlotToVK(plotToPublish)
+                // Enrich bundle plots with member info
+                if (plot.bundle_id) {
+                    const { data: members } = await supabase
+                        .from('land_plots')
+                        .select('cadastral_number, area_sotok')
+                        .eq('bundle_id', plot.bundle_id)
+                        .eq('is_active', true)
+                        .order('cadastral_number', { ascending: true })
+
+                    if (members && members.length > 1) {
+                        plotToPublish.bundleMembers = members.map((m: any) => ({
+                            cadastral_number: m.cadastral_number || '',
+                            area_sotok: Number(m.area_sotok) || 0,
+                        }))
+                        plotToPublish.bundleTotalArea = members.reduce((sum: number, m: any) => sum + (Number(m.area_sotok) || 0), 0)
+                        plotToPublish.bundleCount = members.length
+                    }
+                }
+
+                const result = await publishPlotToVK(plotToPublish as any)
 
                 // Check if post already exists (update) or insert new
                 const { data: existingPost } = await supabase

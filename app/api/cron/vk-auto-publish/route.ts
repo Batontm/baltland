@@ -77,8 +77,8 @@ export async function GET(request: NextRequest) {
 
         const publishedIds = new Set((publishedPosts || []).map(p => p.plot_id).filter(Boolean))
 
-        // Get active plots not yet published
-        const { data: plots, error: plotsError } = await supabase
+        // Get active plots not yet published (standalone + primary bundle)
+        const { data: standalonePlots, error: err1 } = await supabase
             .from('land_plots')
             .select('id, title, cadastral_number')
             .eq('is_active', true)
@@ -86,15 +86,26 @@ export async function GET(request: NextRequest) {
             .order('created_at', { ascending: false })
             .limit(dailyLimit + publishedIds.size)
 
-        if (plotsError) {
+        const { data: bundlePrimaryPlots, error: err2 } = await supabase
+            .from('land_plots')
+            .select('id, title, cadastral_number')
+            .eq('is_active', true)
+            .not('bundle_id', 'is', null)
+            .eq('is_bundle_primary', true)
+            .order('created_at', { ascending: false })
+            .limit(dailyLimit + publishedIds.size)
+
+        if (err1 || err2) {
             return NextResponse.json({ 
                 message: 'Database error',
-                error: plotsError.message
+                error: (err1 || err2)!.message
             }, { status: 500 })
         }
 
+        const plots = [...(standalonePlots || []), ...(bundlePrimaryPlots || [])]
+
         // Filter out already published
-        const unpublishedPlots = (plots || []).filter(p => !publishedIds.has(p.id)).slice(0, dailyLimit)
+        const unpublishedPlots = plots.filter(p => !publishedIds.has(p.id)).slice(0, dailyLimit)
 
         if (unpublishedPlots.length === 0) {
             return NextResponse.json({ 
